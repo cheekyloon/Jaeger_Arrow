@@ -6,6 +6,13 @@
 # Image names contain date and time
 # of the image creation
 
+# Note: the movie.avi are read with VLC
+# but not with QuickTime Player
+# To read the video with QuickTime Player
+# we need to convert .avi in .mp4
+# Here is the line command:
+# ffmpeg -i video.avi video.mp4
+
 #=========================================
 ### import modules
 import cv2
