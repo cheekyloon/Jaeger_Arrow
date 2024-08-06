@@ -20,12 +20,12 @@ import os
 
 #=========================================
 # name of movie file
-mfile     = '20240723-20240729'
+mfile     = '20230915-20231005'
 ### path of movie 
-mname  = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/movie/' + mfile + '.avi'
+mname     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/movie/' + mfile + '.avi'
 ### path to directory
-dirF      = '/Volumes/KH-ISW/Jaeger_Arrow/Fieldwork/20240722/CamDo/'
-#dirF      = '/Users/sandy/Desktop/test/'
+#dirF      = '/Volumes/KH-ISW/Jaeger_Arrow/Fieldwork/20240722/CamDo/'
+dirF      = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101/'
 ### number of frame per second
 fps       = 5
 ### define text properties

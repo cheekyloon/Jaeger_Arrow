@@ -5,10 +5,10 @@
 # from their metadata 
 
 # Directory where to move renamed images
-dir_img_new="/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/images/20231101"
+dir_img_new="/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101"
 
 # Make a loop over the directory containing the raw images
-for dir_img in /Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/images/20231101/*; do
+for dir_img in /Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101/*; do
 
     # Loop through all images in each directory
     for image in "$dir_img"/*; do
