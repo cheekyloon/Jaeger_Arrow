@@ -1,8 +1,9 @@
 #!/Users/sandy/miniconda3/bin/python
 
-# This script plot hovmollers
-# of pixel intensity and temperature 
-# for ISW occuring on the 27th of september 
+
+# This script plot hovmoller
+# of temperature for ISW occuring 
+# on the 20th of september 
 
 # import modules
 from rsk_tools            import winmean_rsk_data
@@ -16,7 +17,7 @@ import datetime
 
 ###################################
 # define figure name
-figname   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/hov-pix-T_20230927.png'
+figname   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/hov-T_20230920.png'
 # define figure characteristics
 plt.rcParams['font.family']         = 'Helvetica'
 plt.rcParams['axes.titlepad']       = 15
@@ -37,21 +38,6 @@ Tticks_cb = np.arange(6,20,2)
 tticks    = np.arange(0,20,2)
 
 ###################################
-# load file for pixel intensity
-# specify path
-dirPI  = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/'
-# specify file
-filePI = 'Hovmoller_27_Sept_2023_1m.mat'
-# load mat file
-matPI  = scipy.io.loadmat(dirPI + filePI)
-# Convert to datetime using the MATLAB epoch (January 1, 0000) as the reference
-timePI = pd.to_datetime(matPI['mtime'][0] - 719529, unit='D', origin='unix')
-# remove mean from pixel intensity
-pixel_int = matPI['pixel_int'] - np.nanmean(matPI['pixel_int'])
-# Create meshgrid
-X, Y = np.meshgrid(timePI, matPI['x_prime'][0])
-
-###################################
 # define RSK directory 
 dirRSK     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/RBRsolo/'
 # define RSK files name 
@@ -66,13 +52,13 @@ fileRSK    = ['230463_20231101_1957.rsk', '230462_20231101_1952.rsk', \
 # Define RSK z-axis
 zSolo      = np.array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 7, 5, 3, 1])
 # beginning and end time of event
-t0         = pd.to_datetime('2023-09-27 17:20:00')
-tend       = pd.to_datetime('2023-09-27 18:10:00')
+t0         = pd.to_datetime('2023-09-20 17:05:00')
+tend       = pd.to_datetime('2023-09-20 17:35:00')
 ### specify time for arrows
-ta         = pd.to_datetime('2023-09-27 17:24:29')
-tb         = pd.to_datetime('2023-09-27 17:37:28')
-tc         = pd.to_datetime('2023-09-27 17:47:29')
-td         = pd.to_datetime('2023-09-27 18:05:28')
+ta         = pd.to_datetime('2023-09-20 17:09:08')
+tb         = pd.to_datetime('2023-09-20 17:15:29')
+tc         = pd.to_datetime('2023-09-20 17:20:28')
+td         = pd.to_datetime('2023-09-20 17:28:28')
 
 
 ###################################
@@ -123,65 +109,12 @@ T5th = T5th.where(~mask)
 #T5th['datetime'] = pd.to_datetime(T5th['datetime'].values)
 
 ###################################
-# Parameters for the inclined arrow to draw
-# on the hovmoller of pixel intensity
-# incident wave
-# slope
-slope_i               = -0.7
-# distance at t = 0
-intercept_i           =  400   
-#intercept_i           = 1064 
-# Define the line's start and end points in terms of time
-line_start_time_i     = pd.Timestamp('2023-09-27 17:23:00')
-line_end_time_i       = pd.Timestamp('2023-09-27 17:27:00')
-#line_start_time_i     = pd.Timestamp('2023-09-27 17:25:55')
-#line_end_time_i       = pd.Timestamp('2023-09-27 17:45:20')
-line_start_distance_i = slope_i * (line_start_time_i - t0) / pd.Timedelta(seconds=1) + intercept_i
-line_end_distance_i   = slope_i * (line_end_time_i - t0) / pd.Timedelta(seconds=1) + intercept_i
-# Add a legend aligned with the arrow
-mid_time_i            = line_start_time_i + (line_end_time_i - line_start_time_i) / 2
-mid_distance_i        = line_start_distance_i + (line_end_distance_i - line_start_distance_i) / 2
-# reflected wave
-# slope
-slope_r               = 0.5    
-# distance at t = 0
-intercept_r           =  -1184  
-# Define the line's start and end points in terms of time
-line_start_time_r     = pd.Timestamp('2023-09-27 18:03:00')
-line_end_time_r       = pd.Timestamp('2023-09-27 18:07:00')
-line_start_distance_r = slope_r * (line_start_time_r - t0) / pd.Timedelta(seconds=1) + intercept_r
-line_end_distance_r   = slope_r * (line_end_time_r - t0) / pd.Timedelta(seconds=1) + intercept_r
-# Add a legend aligned with the arrow
-mid_time_r            = line_start_time_r + (line_end_time_r - line_start_time_r) / 2
-mid_distance_r        = line_start_distance_r + (line_end_distance_r - line_start_distance_r) / 2
-
-###################################
 # display figure 
 plt.ion()
 # start figure 
 f1,ax1 = plt.subplots(figsize=(20,8), nrows = 2, ncols = 1, sharex=True)
-# pixel intensity row
-c0 = ax1[0].pcolormesh(X, Y, pixel_int, shading='gouraud', vmin=-80, vmax=70)
-# Apply gray colormap
-c0.set_cmap('gray')
-# Plot an inclined line
-#ax1[0].plot([line_start_time_i, line_end_time_i], [line_start_distance_i, line_end_distance_i], 'k--', lw=0.8)
-# Add an arrow with the slope being the incident wave phasespeed 
-ax1[0].annotate('', xy=(line_end_time_i, line_end_distance_i), xytext=(line_start_time_i, line_start_distance_i),
-            arrowprops=dict(arrowstyle="->", color='w', lw=2.))
-# Add an arrow with the slope being the reflected wave phasespeed 
-ax1[0].annotate('', xy=(line_end_time_r, line_end_distance_r), xytext=(line_start_time_r, line_start_distance_r),
-            arrowprops=dict(arrowstyle="->", color='w', lw=2.))
-# Adjust text to be above the arrow and rotate to align with it
-# incident wave
-ax1[0].text(mid_time_i + pd.Timedelta(seconds=-120), mid_distance_i - 51, r'$c_i$ = 0.7 m s$^{-1}$', color='w', rotation=-41,
-        fontsize=14)
-# reflected wave
-ax1[0].text(mid_time_r + pd.Timedelta(seconds=-173), mid_distance_r - 34, r'$c_r$ = 0.5 m s$^{-1}$', color='w', rotation=30,
-        fontsize=14)
-# add labels
-ax1[0].set_ylabel('$x^{\prime}$ (m)')
-# temperature row
+# don't show top panel 
+ax1[0].axis("off")
 # fill nan with color
 ax1[1].set_facecolor('lightgrey')
 # filled contour
