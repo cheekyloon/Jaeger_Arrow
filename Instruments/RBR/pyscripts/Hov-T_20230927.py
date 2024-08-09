@@ -10,15 +10,14 @@ from rsk_tools            import winmean_rsk_data
 import numpy              as np
 import pandas             as pd
 import xarray             as xr
+import scipy.io
 import matplotlib.dates   as md
 import matplotlib.pyplot  as plt
 import datetime
 
 ###################################
 # define figure name
-figname = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/solo20230927.png'
-# define colormap
-cmapT   = 'RdYlBu_r'
+figname   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/hov-pix-T_20230927.png'
 # define figure characteristics
 plt.rcParams['font.family']         = 'Helvetica'
 plt.rcParams['axes.titlepad']       = 15
@@ -30,7 +29,26 @@ plt.rcParams['legend.fontsize']     = 15
 plt.rcParams['figure.titlesize']    = 20
 plt.rcParams['xtick.minor.visible'] = True
 plt.rcParams['ytick.minor.visible'] = True
+# define colormap
+cmapT     = 'RdYlBu_r'
+## define contour and colorbar ticks for temperature
+Tticks    = np.arange(6,18.2,0.2)
+Tticks_cb = np.arange(6,20,2)
 
+###################################
+# load file for pixel intensity
+# specify path
+dirPI  = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/'
+# specify file
+filePI = 'Hovmoller_27_Sept_2023_1m.mat'
+# load mat file
+matPI  = scipy.io.loadmat(dirPI + filePI)
+# Convert to datetime using the MATLAB epoch (January 1, 0000) as the reference
+timePI = pd.to_datetime(matPI['mtime'][0] - 719529, unit='D', origin='unix')
+# remove mean from pixel intensity
+pixel_int = matPI['pixel_int'] - np.nanmean(matPI['pixel_int'])
+# Create meshgrid
+X, Y = np.meshgrid(timePI, matPI['x_prime'][0])
 
 ###################################
 # define RSK directory 
@@ -55,6 +73,8 @@ tb         = pd.to_datetime('2023-09-27 17:37:28')
 tc         = pd.to_datetime('2023-09-27 17:47:29')
 td         = pd.to_datetime('2023-09-27 18:05:28')
 
+
+###################################
 # define length of window for
 # a mean over a 5-points window
 window_size = 5
@@ -88,7 +108,7 @@ for nn, file in enumerate(fileRSK):
     # Append
     df_rsk.append(dfe.to_xarray())
 
-# combined along the height
+# combined temperature along the height dimension
 Tmean = xr.concat(df_rsk, dim='h', join='outer')
 # Extract every 5th data point along the time axis
 T5th  = Tmean.isel(datetime=slice(None, None, 5))
@@ -98,43 +118,100 @@ P5th  = Pm.isel(datetime=slice(None, None, 5))
 mask = T5th['h'] > P5th['pressure']
 # Mask values where depth is greater than P5th
 T5th = T5th.where(~mask) 
-# Convert datetime coordinates to nanosecond precision
-T5th['datetime'] = T5th['datetime']
-# Convert datetime to nanosecond precision using pandas
-T5th['datetime'] = pd.to_datetime(T5th['datetime'].values).astype('datetime64[ns]')
-## define contour and colorbar ticks
-Tticks    = np.arange(6,18.2,0.2)
-Tticks_cb = np.arange(6,20,2)
+# Convert datetime array to 
+#T5th['datetime'] = pd.to_datetime(T5th['datetime'].values)
 
+###################################
+# Parameters for the inclined arrow to draw
+# on the hovmoller of pixel intensity
+# incident wave
+# slope
+slope_i               = -0.7
+# distance at t = 0
+intercept_i           =  400   
+#intercept_i           = 1064 
+# Define the line's start and end points in terms of time
+line_start_time_i     = pd.Timestamp('2023-09-27 17:23:00')
+line_end_time_i       = pd.Timestamp('2023-09-27 17:27:00')
+#line_start_time_i     = pd.Timestamp('2023-09-27 17:25:55')
+#line_end_time_i       = pd.Timestamp('2023-09-27 17:45:20')
+line_start_distance_i = slope_i * (line_start_time_i - t0) / pd.Timedelta(seconds=1) + intercept_i
+line_end_distance_i   = slope_i * (line_end_time_i - t0) / pd.Timedelta(seconds=1) + intercept_i
+# Add a legend aligned with the arrow
+mid_time_i            = line_start_time_i + (line_end_time_i - line_start_time_i) / 2
+mid_distance_i        = line_start_distance_i + (line_end_distance_i - line_start_distance_i) / 2
+# reflected wave
+# slope
+slope_r               = 0.5    
+# distance at t = 0
+intercept_r           =  -1184  
+# Define the line's start and end points in terms of time
+line_start_time_r     = pd.Timestamp('2023-09-27 18:03:00')
+line_end_time_r       = pd.Timestamp('2023-09-27 18:07:00')
+line_start_distance_r = slope_r * (line_start_time_r - t0) / pd.Timedelta(seconds=1) + intercept_r
+line_end_distance_r   = slope_r * (line_end_time_r - t0) / pd.Timedelta(seconds=1) + intercept_r
+# Add a legend aligned with the arrow
+mid_time_r            = line_start_time_r + (line_end_time_r - line_start_time_r) / 2
+mid_distance_r        = line_start_distance_r + (line_end_distance_r - line_start_distance_r) / 2
+
+###################################
 # display figure 
 plt.ion()
-
 # start figure 
-f1,ax1 = plt.subplots(figsize=(20,8))
-ax1.set_facecolor('lightgrey')
+f1,ax1 = plt.subplots(figsize=(20,8), nrows = 2, ncols = 1, sharex=True)
+# pixel intensity row
+c0 = ax1[0].pcolormesh(X, Y, pixel_int, shading='gouraud', vmin=-80, vmax=70)
+# Apply gray colormap
+c0.set_cmap('gray')
+# Plot an inclined line
+#ax1[0].plot([line_start_time_i, line_end_time_i], [line_start_distance_i, line_end_distance_i], 'k--', lw=0.8)
+# Add an arrow with the slope being the incident wave phasespeed 
+ax1[0].annotate('', xy=(line_end_time_i, line_end_distance_i), xytext=(line_start_time_i, line_start_distance_i),
+            arrowprops=dict(arrowstyle="->", color='w', lw=2.))
+# Add an arrow with the slope being the reflected wave phasespeed 
+ax1[0].annotate('', xy=(line_end_time_r, line_end_distance_r), xytext=(line_start_time_r, line_start_distance_r),
+            arrowprops=dict(arrowstyle="->", color='w', lw=2.))
+# Adjust text to be above the arrow and rotate to align with it
+# incident wave
+ax1[0].text(mid_time_i + pd.Timedelta(seconds=-120), mid_distance_i - 51, r'$c_i$ = 0.7 m s$^{-1}$', color='w', rotation=-41,
+        fontsize=14)
+# reflected wave
+ax1[0].text(mid_time_r + pd.Timedelta(seconds=-173), mid_distance_r - 34, r'$c_r$ = 0.5 m s$^{-1}$', color='w', rotation=30,
+        fontsize=14)
+# add labels
+ax1[0].set_ylabel('$x^{\prime}$ (m)')
+# temperature row
+# fill nan with color
+ax1[1].set_facecolor('lightgrey')
 # filled contour
-c1 = ax1.contourf(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks, cmap = cmapT, extend = 'both')
+c1 = ax1[1].contourf(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks, cmap = cmapT, extend = 'both')
 # line contour
-ax1.contour(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks_cb, colors='k', linewidths=0.8)
+ax1[1].contour(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks_cb, colors='k', linewidths=0.8)
 # add arrows and symbol at different location along x-axis
-ax1.annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-ax1.annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-ax1.annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-ax1.annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+ax1[1].annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+ax1[1].annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+ax1[1].annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+ax1[1].annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
 # x-axis format in HH:MM
-ax1.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+ax1[1].xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
 # Rotate x-axis labels for better readability
 plt.gcf().autofmt_xdate()
 # set minor tick every minute
-ax1.xaxis.set_minor_locator(md.MinuteLocator(interval=1))
+ax1[1].xaxis.set_minor_locator(md.MinuteLocator(interval=1))
 # set xlim
-ax1.set_xlim(t0, tend)
+ax1[1].set_xlim(t0, tend)
+# add triangles pointing at depth at which there are thermometers
+for y in zSolo:
+    ax1[1].annotate('', xy=(tend, y), xytext=(tend + pd.Timedelta(seconds=0.1), y),
+                arrowprops=dict(arrowstyle="-|>", color='k', lw=1))
 # add labels
-ax1.set_ylabel('$z$ (m)')
-ax1.set_xlabel(r'Time (UTC) on 27 September 2023')
+ax1[1].set_ylabel('$z$ (m)')
+ax1[1].set_xlabel(r'Time (UTC) on 27 September 2023')
 # add colorbar
-cax = f1.add_axes([0.91, 0.2, 0.015, 0.4])
+cax = f1.add_axes([0.92, 0.002, 0.015, 0.4])
 f1.colorbar(c1, cax=cax, ticks = Tticks_cb, orientation='vertical', label = r'Temperature ($^{\circ}$C)')
+# adjuts subplot
+f1.subplots_adjust(top=1.,hspace=0.15,bottom=0.)
 
 # save the figure 
 f1.savefig(figname,dpi=500,bbox_inches='tight')
