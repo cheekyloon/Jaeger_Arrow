@@ -31,9 +31,11 @@ plt.rcParams['xtick.minor.visible'] = True
 plt.rcParams['ytick.minor.visible'] = True
 # define colormap
 cmapT     = 'RdYlBu_r'
-## define contour and colorbar ticks for temperature
+# define contour and colorbar ticks for temperature
 Tticks    = np.arange(6,18.2,0.2)
 Tticks_cb = np.arange(6,20,2)
+# set yticks for temperature
+tticks    = np.arange(0,20,2)
 
 ###################################
 # load file for pixel intensity
@@ -204,6 +206,8 @@ ax1[1].set_xlim(t0, tend)
 for y in zSolo:
     ax1[1].annotate('', xy=(tend, y), xytext=(tend + pd.Timedelta(seconds=0.1), y),
                 arrowprops=dict(arrowstyle="-|>", color='k', lw=1))
+# set y-ticks
+ax1[1].set_yticks(tticks)
 # add labels
 ax1[1].set_ylabel('$z$ (m)')
 ax1[1].set_xlabel(r'Time (UTC) on 27 September 2023')
