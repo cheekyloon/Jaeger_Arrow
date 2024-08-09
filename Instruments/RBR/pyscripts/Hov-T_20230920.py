@@ -142,7 +142,7 @@ for y in zSolo:
 ax1[1].set_yticks(tticks)
 # add labels
 ax1[1].set_ylabel('$z$ (m)')
-ax1[1].set_xlabel(r'Time (UTC) on 27 September 2023')
+ax1[1].set_xlabel(r'Time (UTC) on 20 September 2023')
 # add colorbar
 cax = f1.add_axes([0.92, 0.002, 0.015, 0.4])
 f1.colorbar(c1, cax=cax, ticks = Tticks_cb, orientation='vertical', label = r'Temperature ($^{\circ}$C)')
