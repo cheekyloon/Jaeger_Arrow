@@ -14,7 +14,7 @@ from matplotlib.patches import Rectangle
 
 #=========================================
 # name of experiment 
-exp_name = 'APE5e5'
+exp_name = 'APE1e4'
 # path to directory
 dirF   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/MITgcm_runs/ISW4-CTDF14/' + exp_name +'/'
 # name of grid file
@@ -153,11 +153,11 @@ for ii in range(len(indT)):
     if ii == 0:
         cont1 = f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
         f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
+        #add a rectangle which scales the Jaeger Arrow
+        f1ax[ii].add_patch(Rectangle((150-25/2, 0), 25, 10, color = 'grey', fill = True, alpha = 0.5))
     else:
         f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
         f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
-    #add a rectangle which scales the Jaeger Arrow
-    f1ax[ii].add_patch(Rectangle((150-25/2, 0), 25, 10, color = 'grey', fill = True, alpha = 0.5))
     #patch topography
     f1ax[ii].fill_between(xpatch, zpatch, zmax, color = '#ffeabc')
     #add time
