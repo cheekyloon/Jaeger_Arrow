@@ -14,25 +14,19 @@ from matplotlib.patches import Rectangle
 
 #=========================================
 # name of experiment 
-exp_name = 'APE1e4'
+exp_name = 'APE5e5'
 # path to directory
 dirF   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/MITgcm_runs/ISW4-CTDF14/' + exp_name +'/'
 # name of grid file
 gfile  = 'grid.glob.nc'
 ### grid path
 gf     = dirF + gfile 
-### netcdf file name
-fname  = 'dynDiag.' + exp_name + '.nc'
-fname0 = 'state.'   + exp_name + '.nc'
-### file path
-df0    = dirF + fname0
-df1    = dirF + fname
+### variable path
+df1    = dirF + 'dynDiag.' + exp_name + '.nc' 
 # name and path of figure to save 
-fgname = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/pictures/ISW4-CTDF14-' + exp_name + '.png'
+fgname = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/pictures/CTDF14-' + exp_name + '.png'
 
 #=========================================
-# frequency of time
-dt    = 5
 # define density surface
 rho2   = 1005
 # define density bottom
@@ -55,10 +49,8 @@ L     = grid.Xp1.isel(Xp1=-1).values
 # create mask
 mask  = grid.HFacC.isel(Y=0).where(grid.HFacC.isel(Y=0)>0)
 masku = grid.HFacW.isel(Y=0).where(grid.HFacW.isel(Y=0)>0)
-# len of simulation  
-nt    = len(xr.open_dataset(df1)['T'])+1
 # time array 
-T     = np.arange(0,dt*nt,dt)
+T     = xr.open_dataset(df1)['T'] 
 
 #=========================================
 # define figure characteristics
@@ -91,42 +83,43 @@ rrhocb  = 2
 cbrho   = np.arange(vrho0,vrho1+rrhocb,rrhocb)
 
 #=========================================
-# find time index and 
-# create array for u contours
+# choose time to initialize the start of the 
+# simulation find time index we want to display and
+# create array for u contours 
 # 1e4
 if exp_name == 'APE1e4':
-    ind1   = np.where(T == 785)[0][0]
-    ind2   = np.where(T == 1100)[0][0]
-    ind3   = np.where(T == 1155)[0][0]
-    ind4   = np.where(T == 1465)[0][0]
-    ind5   = np.where(T == 1840)[0][0]
-    ind6   = np.where(T == 2270)[0][0]
-    ulev   = np.arange(-0.2,0.22,0.02) 
+    t0   = 700
+    t1   = 1075
+    t2   = 1155
+    t3   = 1250
+    t4   = 1340
+    t5   = 1440
+    #t5   = 2270
+    ulev = np.arange(-0.22,0.24,0.02) 
 # 1e5
 elif exp_name == 'APE1e5':
-    ind1   = np.where(T == 1020)[0][0]
-    ind2   = np.where(T == 1190)[0][0]
-    ind3   = np.where(T == 1270)[0][0]
-    ind4   = np.where(T == 1300)[0][0]
-    ind5   = np.where(T == 1360)[0][0]
-    ind6   = np.where(T == 1970)[0][0]
-    ulev   = np.arange(-0.8,0.9,0.1) 
+    t0   = 900
+    t1   = 1190
+    t2   = 1270
+    t3   = 1300
+    t4   = 1360
+    t5   = 1970
+    ulev = np.arange(-1.0,1.1,0.1) 
 # 5e5
 elif exp_name == 'APE5e5':
-    ind1   = np.where(T == 1015)[0][0] #2nd i
-    ind2   = np.where(T == 1110)[0][0] #1rst r 
-    ind3   = np.where(T == 1215)[0][0] #3rd i
-    ind4   = np.where(T == 1320)[0][0] #2nd r
-    #ind5   = np.where(T == 1420)[0][0] #4rth i
-    ind5   = np.where(T == 1620)[0][0] #3rd r
-    ind6   = np.where(T == 1800)[0][0] #last peak in timeserie of Fig. 18
-    ulev   = np.arange(-1.0,1.1,0.1) 
+    t0   = 700
+    t1   = 1015 #2nd i
+    t2   = 1110 #1rst r 
+    t3   = 1215 #3rd i
+    t4   = 1320 #2nd r
+    #t5   = 1420 #4rth i
+    t5   = 1620 #3rd r
+    t6   = 1800 #last peak in timeserie of Fig. 18
+    ulev = np.arange(-1.0,1.1,0.1) 
 # array of time index
-indT               = np.array([ind1,ind2,ind3,ind4,ind5,ind6])
-# replace -0 in ucontc by 0
-ulev[ulev==-0] = 0
+TT     = np.array([t0,t1,t2,t3,t4,t5])
 # u level for contours
-ulev_kn = ms2kn * ulev 
+ulev_kn  = ms2kn * ulev 
 
 #=========================================
 # Round small values close to zero to zero for labeling
@@ -139,7 +132,7 @@ plt.ion()
 plt.show()
 
 ### Start figure 
-f1,f1ax = plt.subplots(figsize=(18,12),nrows=6,ncols=1,sharex=True)
+f1,f1ax = plt.subplots(figsize=(18,12),nrows=len(TT),ncols=1,sharex=True)
 f1ax    = f1ax.ravel()
 # axis label
 f1ax[0].set_ylabel(r'Depth (m)')
@@ -149,19 +142,19 @@ f1ax[3].set_ylabel(r'Depth (m)')
 f1ax[4].set_ylabel(r'Depth (m)')
 f1ax[5].set_ylabel(r'Depth (m)')
 f1ax[5].set_xlabel(r'Distance from the wharf (m)')
-for ii in range(len(indT)):
+for ii in range(len(TT)):
     if ii == 0:
-        cont1 = f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
-        f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
+        cont1 = f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].sel(T=TT[ii],method='nearest').isel(Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
+        f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].sel(T=TT[ii],method='nearest').isel(Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
         #add a rectangle which scales the Jaeger Arrow
         f1ax[ii].add_patch(Rectangle((150-25/2, 0), 25, 10, color = 'grey', fill = True, alpha = 0.5))
     else:
-        f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
-        f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].isel(T=indT[ii],Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
+        f1ax[ii].contourf(xxu,-zzu, masku * xr.open_dataset(df1)['UVELMASS'].sel(T=TT[ii],method='nearest').isel(Y=0).rename({'Zmd000100':'Z'}), levels = ulev, cmap = cmap1, extend = "both")
+        f1ax[ii].contour(xx,-zz, mask * xr.open_dataset(df1)['RHOAnoma'].sel(T=TT[ii],method='nearest').isel(Y=0).rename({'Zmd000100':'Z'})+1000, cbrho, colors = 'k', linewidths = 0.8)
     #patch topography
     f1ax[ii].fill_between(xpatch, zpatch, zmax, color = '#ffeabc')
     #add time
-    f1ax[ii].text(0.9, 0.09,'$t$ = %d s' %(T[indT[ii]]), transform=f1ax[ii].transAxes, color='k', fontsize=15)
+    f1ax[ii].text(0.9, 0.09,'$t$ = %0.1f min' %((T.sel(T=TT[ii],method='nearest')-T.sel(T=t0,method='nearest'))/60), transform=f1ax[ii].transAxes, color='k', fontsize=15)
     #set x limit
     f1ax[ii].set_xlim(0, Lmax)
     #set y limit
