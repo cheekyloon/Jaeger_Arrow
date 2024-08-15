@@ -42,8 +42,6 @@ ms2kn = 1/kn2ms
 #=========================================
 # load grid 
 grid  = xr.open_dataset(gf) 
-# length of domain
-L     = grid.Xp1.isel(Xp1=-1).values
 # create mask
 mask  = grid.HFacC.isel(Y=0).where(grid.HFacC.isel(Y=0)>0)
 masku = grid.HFacW.isel(Y=0).where(grid.HFacW.isel(Y=0)>0)
