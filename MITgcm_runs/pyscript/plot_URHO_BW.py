@@ -29,7 +29,7 @@ fgname = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/pictures/CTDF14-Break
 # define density surface
 rho2   = 1005
 # define density bottom
-rho1   = 1025
+rho1   = 1022
 # x- and z-axis limit 
 Lmax   = 100 # [m]
 zmax   = 40  # [m]
@@ -71,10 +71,10 @@ xticks  = np.arange(0,1100,100)
 xpatch  = grid.Depth.X.isel(X=slice(0,400)).values
 zpatch  = grid.Depth.isel(X=slice(0,400)).values.flatten()
 # define contour levels for rho
-vrho0   = rho2
+vrho2   = rho2
 vrho1   = rho1
 rrhocb  = 2
-rholev  = np.arange(vrho0,vrho1+rrhocb,rrhocb)
+rholev  = np.arange(vrho2,vrho1+rrhocb,rrhocb)
 # define contour for u
 ulev = np.arange(-1.0,1.1,0.1)
 # u level for contours

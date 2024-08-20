@@ -30,7 +30,7 @@ fgname = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/pictures/CTDF14-' + e
 # define density surface
 rho2   = 1005
 # define density bottom
-rho1   = 1025
+rho1   = 1022
 # x- and z-axis limit 
 Lmax   = 1000  # [m]
 zmax   = 20    # [m]
@@ -72,11 +72,10 @@ xticks  = np.arange(0,1100,100)
 xpatch  = grid.Depth.X.isel(X=slice(0,400)).values
 zpatch  = grid.Depth.isel(X=slice(0,400)).values.flatten()
 # define contour levels for rho
-vrho0   = rho2
+vrho2   = rho2
 vrho1   = rho1
-rrho    = (vrho1-vrho0)/50
 rrhocb  = 2
-cbrho   = np.arange(vrho0,vrho1+rrhocb,rrhocb)
+cbrho   = np.arange(vrho2,vrho1+rrhocb,rrhocb)
 
 #=========================================
 # choose time to initialize the start of the 
