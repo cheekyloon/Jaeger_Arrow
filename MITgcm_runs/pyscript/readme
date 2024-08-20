@@ -1,12 +1,14 @@
 Script description:
 ==================
 
-
 hov-U.py: 
      plot hovmoller of horizontal velocity for medium- and large-amplitude wave simulations on the first 200m from the wharf.
 
+plot_URHO.py: 
+     plot density and horizontal velocity contours (on same panel) for several times of one underwater wave simulation.
+
 plot_URHO_BW.py: 
-     plot density and horizontal velocity contours for medium- and large-amplitude wave simulations to highlight breaking wave features.
+     plot density and horizontal velocity contours on separate panel for medium- and large-amplitude wave simulations to highlight breaking wave features.
 
 plot_RHO_BW.py: 
      plot density contours for medium- and large-amplitude wave simulations to highlight breaking wave features.
