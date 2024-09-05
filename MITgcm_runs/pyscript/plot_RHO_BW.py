@@ -43,16 +43,16 @@ mask  = grid.HFacC.isel(Y=0).where(grid.HFacC.isel(Y=0)>0)
 #=========================================
 # define figure characteristics
 plt.rcParams['font.family']         = 'Helvetica'
-plt.rcParams['axes.titlepad']       = 6
-plt.rcParams['xtick.labelsize']     = 12
-plt.rcParams['ytick.labelsize']     = 12
-plt.rcParams['axes.labelsize' ]     = 12
-plt.rcParams['legend.fontsize']     = 12
-plt.rcParams['figure.titlesize']    = 14
-plt.rcParams['font.size']           = 14
+plt.rcParams['axes.titlepad']       = 15
+plt.rcParams['font.size']           = 17
+plt.rcParams['xtick.labelsize']     = 17
+plt.rcParams['ytick.labelsize']     = 17
+plt.rcParams['axes.labelsize' ]     = 17
+plt.rcParams['legend.fontsize']     = 15
+plt.rcParams['figure.titlesize']    = 20
 plt.rcParams['xtick.minor.visible'] = True
 plt.rcParams['ytick.minor.visible'] = True
-plt.rcParams['savefig.bbox']        = 'standard' 
+plt.rcParams['savefig.bbox']        = 'standard'
 # define colormap
 cmap2   = 'RdYlBu' 
 # define meshgrids
@@ -133,7 +133,7 @@ cbar1.ax.tick_params(labelsize=10)
 
 
 # adjuts subplot
-f1.subplots_adjust(hspace=0.05, wspace=0.1)
+f1.subplots_adjust(hspace=0.2, wspace=0.1)
 
 # save figure
 f1.savefig(fgname,bbox_inches='tight')
