@@ -19,8 +19,8 @@ import datetime
 ###################################
 ### define variables
 # name of saved figure
-fname = '202407'
-if fname=='202407':
+fname = '2024'
+if fname=='2024':
     # beginning and end time of event
     t0   = pd.to_datetime('2024-07-24 00:00:00')
     tend = pd.to_datetime('2024-09-11 12:00:00')
@@ -138,17 +138,17 @@ c1 = ax1[1].contourf(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks,
 if fmt=='%H:%M':
    # line contour
    ax1[1].contour(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks_cb, colors='k', linewidths=0.8)
-# add arrows and symbol at different location along x-axis
-#ax1[1].annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-#ax1[1].annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-#ax1[1].annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-#ax1[1].annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-# x-axis format in HH:MM
+   # add arrows and symbol at different location along x-axis
+   #ax1[1].annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   #ax1[1].annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   #ax1[1].annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   #ax1[1].annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+# x-axis format 
 ax1[1].xaxis.set_major_formatter(md.DateFormatter(fmt))
 # Rotate x-axis labels for better readability
 plt.gcf().autofmt_xdate()
-# set minor tick every minute
 if fmt=='%H:%M':
+   # set minor tick every minute
    ax1[1].xaxis.set_minor_locator(md.MinuteLocator(interval=1))
 # set xlim
 ax1[1].set_xlim(t0, tend)
