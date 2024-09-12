@@ -4,7 +4,7 @@
 # This script plot hovmoller
 # of temperature from the thermometers
 # deployed at Grande-Anse wharf
-# in summer 2024 for the full period
+# in autumn 2023 for the full period
 # or for a specific period 
 
 # import modules
@@ -19,28 +19,28 @@ import datetime
 ###################################
 ### define variables
 # name of saved figure
-fname = '2024'
-if fname=='2024':
+fname = '2023'
+if fname=='2023':
     # beginning and end time of event
-    t0   = pd.to_datetime('2024-07-24 00:00:00')
-    tend = pd.to_datetime('2024-09-11 12:00:00')
+    t0   = pd.to_datetime('2023-09-15 13:30:00')
+    tend = pd.to_datetime('2023-11-01 16:30:00')
     # x-axis format in YYYY-mm-dd
     fmt  = '%Y-%m-%d'
     # figure title
-    xlab = 'Time (UTC)'  
+    xlab = 'Time (UTC)'
 else:
     # beginning and end time of event
-    t0   = pd.to_datetime('2024-07-24 11:30:00')
-    tend = pd.to_datetime('2024-07-24 13:30:00')
+    t0   = pd.to_datetime('2023-09-20 17:05:00')
+    tend = pd.to_datetime('2023-09-20 17:35:00')
     # x-axis format in HH:MM
-    fmt  = '%H:%M' 
+    fmt  = '%H:%M'
     # figure title
-    xlab = 'Time (UTC) on 24 July 2024'  
+    xlab = 'Time (UTC) on 20 September 2023'
     # specify time for arrows
-    ta   = pd.to_datetime('2024-07-24 17:09:08')
-    tb   = pd.to_datetime('2024-07-24 17:15:29')
-    tc   = pd.to_datetime('2024-07-24 17:20:28')
-    td   = pd.to_datetime('2024-07-24 17:28:28')
+    ta   = pd.to_datetime('2023-09-20 17:09:08')
+    tb   = pd.to_datetime('2023-09-20 17:15:29')
+    tc   = pd.to_datetime('2023-09-20 17:20:28')
+    td   = pd.to_datetime('2023-09-20 17:28:28')
 
 ###################################
 # define figure name
@@ -66,16 +66,16 @@ tticks    = np.arange(0,20,2)
 
 ###################################
 # define RSK directory 
-dirRSK     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/RBRsolo/20240911/'
+dirRSK     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/RBRsolo/'
 # define RSK files name 
-fileRSK    = ['230463_20240911_1135.rsk', '230462_20240911_1114.rsk', \
-             '230461_20240911_1200.rsk', '230460_20240911_1028.rsk', \
-             '230459_20240911_1127.rsk', '230458_20240911_1148.rsk', \
-             '230457_20240911_1144.rsk', '230456_20240911_1153.rsk', \
-             '230455_20240911_1131.rsk', '230454_20240911_1139.rsk', \
-             '230453_20240911_1032.rsk', '230452_20240911_1204.rsk', \
-             '230451_20240911_1118.rsk', '230450_20240911_1037.rsk', \
-             '230890_20240911_1041.rsk']
+fileRSK    = ['230463_20231101_1957.rsk', '230462_20231101_1952.rsk', \
+             '230461_20231101_1947.rsk', '230460_20231101_1942.rsk', \
+             '230459_20231101_1936.rsk', '230458_20231101_1931.rsk', \
+             '230457_20231101_1925.rsk', '230456_20231101_1920.rsk', \
+             '230455_20231101_1902.rsk', '230454_20231101_1912.rsk', \
+             '230453_20231101_1907.rsk', '230452_20231101_1916.rsk', \
+             '230451_20231101_1843.rsk', '230450_20231101_1837.rsk', \
+             '230890_20231101_1849.rsk']
 # Define RSK z-axis
 zSolo      = np.array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 7, 5, 3, 1])
 
@@ -139,11 +139,11 @@ if fmt=='%H:%M':
    # line contour
    ax1[1].contour(T5th['datetime'], T5th['h'], T5th['temperature'].T, Tticks_cb, colors='k', linewidths=0.8)
    # add arrows and symbol at different location along x-axis
-   #ax1[1].annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-   #ax1[1].annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-   #ax1[1].annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-   #ax1[1].annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
-# x-axis format 
+   ax1[1].annotate('(a)', xy=(ta, 19), xytext=(ta, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   ax1[1].annotate('(b)', xy=(tb, 19), xytext=(tb, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   ax1[1].annotate('(c)', xy=(tc, 19), xytext=(tc, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+   ax1[1].annotate('(d)', xy=(td, 19), xytext=(td, 20.5), horizontalalignment="center", arrowprops=dict(arrowstyle='->',lw=1.5))
+# x-axis format in HH:MM
 ax1[1].xaxis.set_major_formatter(md.DateFormatter(fmt))
 # Rotate x-axis labels for better readability
 plt.gcf().autofmt_xdate()
