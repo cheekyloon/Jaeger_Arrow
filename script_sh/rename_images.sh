@@ -5,13 +5,15 @@
 # from their metadata 
 
 # Directory where to move renamed images
-dir_img_new="/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101"
+#dir_img_new="/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101"
+dir_img_new="/Volumes/KH-ISW/Jaeger_Arrow/Fieldwork/20240722/CamDo"
 
 # Make a loop over the directory containing the raw images
-for dir_img in /Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101/*; do
+#for dir_img in /Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/CamDo/raw/20231101/*/; do
+for dir_img in /Volumes/KH-ISW/Jaeger_Arrow/Fieldwork/20240722/CamDo/*/; do
 
     # Loop through all images in each directory
-    for image in "$dir_img"/*; do
+    for image in "$dir_img"*; do
 
         # Extract the DateTimeOriginal metadata 
         datetime=$(exiftool -DateTimeOriginal -s3 "$image")
