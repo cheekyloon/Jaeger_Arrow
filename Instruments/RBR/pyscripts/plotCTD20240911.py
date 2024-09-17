@@ -131,18 +131,18 @@ f1ax[2].plot(df1[td3:ta3]['T'], df1[td3:ta3]['depth'], 'b')
 f1ax[2].plot(df1[ta3:ta3end]['T'], df1[ta3:ta3end]['depth'], 'r')
 f1ax[2].set_title('Troisième descente/montée')
 # xlabels
-f1ax[0].set_xlabel(r"Temperature ($^{\circ}$C)")
-f1ax[1].set_xlabel(r"Temperature ($^{\circ}$C)")
-f1ax[2].set_xlabel(r"Temperature ($^{\circ}$C)")
+f1ax[0].set_xlabel(r"Température ($\mathrm{^{\circ}C}$)")
+f1ax[1].set_xlabel(r"Température ($\mathrm{^{\circ}C}$)")
+f1ax[2].set_xlabel(r"Température ($\mathrm{^{\circ}C}$)")
 # ylabels
-f1ax[0].set_ylabel(r"Profondeur (m)")
+f1ax[0].set_ylabel(r"z (m)")
 f1.suptitle('CTD du 11 septembre 2024')
 # x-limit
 f1ax[0].set_xlim([2, 18])
 # y-limit
 f1ax[0].set_ylim([0, 18])
 # save the plot as a file
-#f1.savefig(figdir + 'CTD20240911descent-ascent.png',dpi=500,bbox_inches='tight')
+f1.savefig(figdir + 'CTD20240911descent-ascent.png',dpi=500,bbox_inches='tight')
 
 # remove ascent from dataframe
 df2 = pd.concat([df1[td1:ta1], df1[td2:ta2], df1[td3:ta3]])
@@ -177,9 +177,9 @@ ax[0].plot(df1[td2:ta2]['T'], df1[td2:ta2]['depth'], "b-", linewidth=0.5)
 ax[0].plot(df1[td3:ta3]['T'], df1[td3:ta3]['depth'], "b-", linewidth=0.5)
 ax[0].set_xlim([2,18])
 ax[0].set_ylim([0,18])
-ax[0].set_xlabel("Temperature ($^\circ$C)")
+ax[0].set_xlabel(r"Température ($\mathrm{^{\circ}C}$)")
 ax[0].xaxis.label.set_color('b')
-ax[0].set_ylabel("Profondeur (m)")
+ax[0].set_ylabel("z (m)")
 ax[0].spines['bottom'].set_color('b')
 ax[0].tick_params(axis='x', colors='b')
 # S
@@ -208,7 +208,7 @@ ax[1].plot(df2['T'].iloc[ip2], p2(df2['T'].iloc[ip2]), color='red', linewidth=0.
 ax[1].plot(df2['T'], df2['rho'], '.', markersize=1)
 ax[1].set_xlim([2,18])
 ax[1].set_ylim([1002,1024])
-ax[1].set_xlabel("Temperature ($^\circ$C)")
+ax[1].set_xlabel("Temperature ($\mathrm{^{\circ}C}$)")
 ax[1].set_ylabel("Densité (kg m$^{-3}$)")
 # Manually format the polynomial equation with spaces after signs
 poly_eq = r'$\rho$ = %.2f T$^2$  %s%.2f T  %s%.2f' % (
