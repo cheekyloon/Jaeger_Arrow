@@ -2,8 +2,8 @@
 
 
 # plot hovmoller of U along the first 200 m
-# for the several simulations of an underwater 
-# wavetrain reflecting against the Grande-Anse Wharf 
+# from the wharf for the  medium and large-amplitude 
+# underwater wave simulations at the Grande-Anse wharf 
  
 #=========================================
 ### import modules
@@ -64,7 +64,7 @@ plt.rcParams['savefig.bbox']        = 'standard'
 # define colormap
 cmap1 = 'seismic'
 # define yticks
-yticks  = np.arange(0,22,2)
+xticks  = np.arange(0,22,2)
 
 
 #=========================================
@@ -80,9 +80,9 @@ plt.show()
 ### Start figure 
 f,ax = plt.subplots(figsize=(18,12), nrows = len(exp_name), ncols = 1, sharex=True)
 # axis label
-ax[0].set_ylabel(r'$t$ (min)')
-ax[1].set_ylabel(r'$t$ (min)')
-ax[1].set_xlabel(r'Distance from the wharf (m)')
+ax[1].set_xlabel(r'$t$ (min)')
+ax[0].set_ylabel(r'Distance from the wharf (m)')
+ax[1].set_ylabel(r'Distance from the wharf (m)')
 # create array for u contours
 ulev = np.arange(vmin[1], vmax[1], dv[1])
 # u level for contours
@@ -97,11 +97,11 @@ for nn, file in enumerate(exp_name):
     T   = xr.open_dataset(df1)['T'].sel(T=slice(t0[nn],tend[nn]))
     T   = (T - T.isel(T=0))/60 
     # define meshgrids
-    xx,yy = np.meshgrid(grid.Xp1.sel(Xp1=slice(0,Lmax)), T)
+    xx,yy = np.meshgrid(T, grid.Xp1.sel(Xp1=slice(0,Lmax)))
     # filled contour
-    cU = ax[nn].contourf(xx, yy, U, levels = ulev, cmap = cmap1, extend = "both") 
+    cU = ax[nn].contourf(xx, yy, U.transpose(), levels = ulev, cmap = cmap1, extend = "both") 
     #set y tickts
-    ax[nn].set_yticks(yticks)
+    ax[nn].set_xticks(xticks)
     # set title
     ax[nn].set_title(title[nn], loc='right') 
 
