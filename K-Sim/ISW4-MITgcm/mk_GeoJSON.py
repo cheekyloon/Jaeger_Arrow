@@ -1,3 +1,5 @@
+#!/usr/bin/env python 
+
 ### create GeoJSON file from a netcdf file 
 
 ### import modules
