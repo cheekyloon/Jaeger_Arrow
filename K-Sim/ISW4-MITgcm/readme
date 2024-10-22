@@ -1,9 +1,9 @@
 Scripts description:
 ===================
 
-mk_netcdf_2DMIT.py:
-   create netcdf file of currents from 2D MITgcm extracted in a horizontal square box with specific resolution dx = dy = dz and timestep dt.
-
 mk_GeoJSON.py:
    convert NetCDF file to GeoJSON format for currents of four ISW from MITgcm using CTDF14-APE1e5 simulation.
+
+mk_netcdf_2DMIT.py:
+   create netcdf file of currents from 2D MITgcm extracted in a horizontal square box with specific resolution dx = dy = dz and timestep dt.
 
