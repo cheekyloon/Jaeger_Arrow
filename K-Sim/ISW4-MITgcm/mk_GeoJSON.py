@@ -84,8 +84,24 @@ for ii in range(len(lon)):
 ### close netcdf file
 ds.close()
 
+def convert_numpy_types(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()  # Convert numpy arrays to lists
+    elif isinstance(obj, np.generic):
+        return obj.item()  # Convert numpy types to Python scalars
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    else:
+        return obj  # Return the object if it's not a NumPy type
+
+# Convert geojson_data to remove NumPy types
+geojson_data_clean = convert_numpy_types(geojson_data)
+
 # Write the geojson data to a file
-fgeo = rdir + GeoJSON + exp + ".GeoJSON"
+fgeo = rdir + '/GeoJSON/' + exp + ".GeoJSON"
 with open(fgeo, "w") as geojson_file:
-    json.dump(geojson_data, geojson_file, indent=4)
+    #json.dump(geojson_data_clean, geojson_file, indent=4)
+    json.dump(geojson_data_clean, geojson_file)
 
