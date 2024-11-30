@@ -106,24 +106,33 @@ for nn, file in enumerate(exp_name):
     ax[nn].set_title(title[nn], loc='right') 
 
 # colorbar box
-cbax = f.add_axes([0.12, 0.93, 0.35, 0.015])
+#cbax = f.add_axes([0.12, 0.93, 0.35, 0.015])
+cbax = f.add_axes([0.96, 0.11, 0.015, 0.35])
 # colorbar with unit m/s
-cbar = f.colorbar(cU, ax=ax[1], cax=cbax, label='$U_{max}$ (m s$^{-1}$)', orientation="horizontal", ticks=ulev)
+#cbar = f.colorbar(cU, ax=ax[1], cax=cbax, label='$U_{max}$ (m s$^{-1}$)', orientation="horizontal", ticks=ulev)
+cbar = f.colorbar(cU, ax=ax[1], cax=cbax, label='$U_{max}$ (m s$^{-1}$)', pad=-1, orientation="vertical", ticks=ulev)
+# Set label to the left
+cbar.ax.yaxis.set_label_position('left')
 # set the tick labels, keeping one label over two
 cbar.set_ticklabels([format_tick(tick) if i % 2 == 0 else '' for i, tick in enumerate(ulev)]) 
 # ticks size
 cbar.ax.tick_params(labelsize=11)
 
 # create a second axis for the second unit
-ax2 = cbar.ax.twiny()
+#ax2 = cbar.ax.twiny()
+ax2 = cbar.ax.twinx()
 # set second label
-ax2.set_xlabel('$U_{max}$ (kn)')
+#ax2.set_xlabel('$U_{max}$ (kn)')
+ax2.set_ylabel('$U_{max}$ (kn)')
 # set ticks for the second axis
-ax2.set_xticks(ulev_kn)
+#ax2.set_xticks(ulev_kn)
+ax2.set_yticks(ulev_kn)
 # set the tick labels, keeping one label over two
-ax2.set_xticklabels([format_tick(tick) if i % 2 == 0 else '' for i, tick in enumerate(ulev_kn)])
+#ax2.set_xticklabels([format_tick(tick) if i % 2 == 0 else '' for i, tick in enumerate(ulev_kn)])
+ax2.set_yticklabels([format_tick(tick) if i % 2 == 0 else '' for i, tick in enumerate(ulev_kn)])
 # Set the limits of the twin axis to match the primary axis limits
-ax2.set_xlim(ulev_kn[0], ulev_kn[-1])
+#ax2.set_xlim(ulev_kn[0], ulev_kn[-1])
+ax2.set_ylim(ulev_kn[0], ulev_kn[-1])
 # remove minor ticks
 ax2.minorticks_off()
 # ticks size
