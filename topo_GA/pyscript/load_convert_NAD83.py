@@ -12,6 +12,11 @@
 ### Load modules
 import pandas as pd
 from pyproj import Proj, Transformer
+#import matplotlib.pyplot as plt
+#import cartopy.crs       as ccrs
+#import cartopy.feature   as cfeature
+import numpy             as np
+from scipy.interpolate   import griddata
 
 ### set root path
 rdir  = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/'
@@ -34,4 +39,37 @@ transformer = Transformer.from_proj(mtm_proj, wgs84_proj)
 
 # Apply the transformation for each x, y coordinate
 df['latitude'], df['longitude'] = transformer.transform(df['x'].values, df['y'].values)
+
+
+# Get the depth of 600kHz ADCP
+# Lat and Lon
+lat_target = 48 + 24.161 / 60
+lon_target = -(70 + 50.037 / 60)
+# Prepare data for interpolation
+points = np.column_stack((df['latitude'], df['longitude']))
+values = df['z'].values
+# Interpolate
+depth_target = griddata(points, values, (lat_target, lon_target), method='linear')
+
+#plt.ion()
+## Set up the map projection
+#fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 5))
+## Plot the depth data
+#mesh = ax.pcolormesh(df['longitude'].values, df['latitude'].values, df['z'].values, cmap='viridis', transform=ccrs.PlateCarree())
+
+## Add map features
+#ax.add_feature(cfeature.COASTLINE)
+#ax.add_feature(cfeature.BORDERS, linestyle=':')
+#ax.add_feature(cfeature.LAND, facecolor='lightgray')
+#ax.add_feature(cfeature.OCEAN, facecolor='lightblue')
+
+## Add a color bar
+#cbar = plt.colorbar(mesh, orientation='vertical', pad=0.05, aspect=40)
+#cbar.set_label('Depth (m)')
+
+## Set titles and labels
+#ax.set_title('Depth Map')
+#ax.set_xlabel('Longitude')
+#ax.set_ylabel('Latitude')
+
 
