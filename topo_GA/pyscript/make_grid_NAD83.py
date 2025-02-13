@@ -11,12 +11,12 @@
 
 ### Load modules
 import pandas as pd
+import numpy  as np
+from scipy.interpolate import griddata
 from pyproj import Proj, Transformer
 #import matplotlib.pyplot as plt
 #import cartopy.crs       as ccrs
 #import cartopy.feature   as cfeature
-import numpy             as np
-from scipy.interpolate   import griddata
 
 ### set root path
 rdir  = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/'
@@ -31,14 +31,30 @@ df = pd.read_csv(fdir, sep='\s+', header=None, names=['x', 'y', 'z'])
 
 # Convert MTM (Zone 7) coordinates to Latitude/Longitude
 # Define the MTM Zone 7 (CSRS) (EPSG code 2949) and the target WGS84 (EPSG code 4326) CRS
-mtm_proj   = Proj("EPSG:2949")  # NAD83 / MTM zone 7
+mtm_proj = Proj("EPSG:2949")  # NAD83 / MTM zone 7
 wgs84_proj = Proj("EPSG:4326")  # WGS84 (Lat/Lon)
 
 # Create a transformer object to transform between MTM Zone 7 (NAD83) and WGS84 (Lat/Lon)
 transformer = Transformer.from_proj(mtm_proj, wgs84_proj)
 
 # Apply the transformation for each x, y coordinate
-df['latitude'], df['longitude'] = transformer.transform(df['x'].values, df['y'].values)
+#df['latitude'], df['longitude'] = transformer.transform(df['x'].values, df['y'].values)
+
+# Build a regular grid
+reso     = 1
+x_grid = np.arange(round(df['x'].min()), round(df['x'].max())+reso, reso)
+y_grid = np.arange(round(df['y'].min()), round(df['y'].max())+reso, reso)
+grid_x, grid_y = np.meshgrid(x_grid, y_grid)
+grid_depth = griddata(
+    (df['x'], df['y']),   # Input coordinates
+    df['z'],              # Input depths
+    (grid_x, grid_y),     # Grid coordinates
+    method='linear',      # Or 'nearest' or 'cubic'
+    fill_value=0          # Default depth for missing points
+)
+
+grid_lat, grid_lon = transformer.transform(grid_x, grid_y)
+
 
 #plt.ion()
 ## Set up the map projection
@@ -61,13 +77,4 @@ df['latitude'], df['longitude'] = transformer.transform(df['x'].values, df['y'].
 #ax.set_xlabel('Longitude')
 #ax.set_ylabel('Latitude')
 
-### Get the depth of 600kHz ADCP
-# Lat and Lon
-lat_target = 48 + 24.161 / 60
-lon_target = -(70 + 50.037 / 60)
-# Prepare data for interpolation
-points = np.column_stack((df['latitude'], df['longitude']))
-values = df['z'].values
-# Interpolate
-depth_target = griddata(points, values, (lat_target, lon_target), method='linear')
 
