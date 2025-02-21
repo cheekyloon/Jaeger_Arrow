@@ -15,93 +15,87 @@ dt = 15
 
 ## root directory
 rdir = "/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/K-Sim/"
-### netcdf filename to convert in geojson
-exp  = "ISW4-APE1e5-dxdy2mdz" + str(dz) + "mdt" + str(dt) + "s"
-fnc  = rdir + "netcdf/" + exp + ".nc"
+## netcdf filename to convert in geojson
+exp  = f"ISW4-APE1e5-dxdy2mdz{dz}mdt{dt}s"
+fnc  = f"{rdir}netcdf/{exp}.nc"
 
-### open netcdf file and load variables
-ds    = nc.Dataset(fnc, 'r')
-t     = ds.variables['time'][:]
-lon   = ds.variables['lon'][:]
-lat   = ds.variables['lat'][:]
-depth = ds.variables['depth'][:]
+## open netcdf file and load variables
+with nc.Dataset(fnc, 'r') as ds:
+    t = ds.variables['time'][:]
+    lon = ds.variables['lon'][:]
+    lat = ds.variables['lat'][:]
+    depth = ds.variables['depth'][:]
 
-# Create the GeoJSON structure
-geojson_data = {
-    "type": "FeatureCollection",
-    "name": exp,
-    "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-    "features": []
-}
+    ## Create the GeoJSON structure
+    geojson_data = {
+        "type": "FeatureCollection",
+        "name": exp,
+        "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+        "features": []
+    }
 
-# Initialize loop over coordinates
-fid = 1
-# Loop over the xarray dataset to populate the features
-for ii in range(len(lon)):
-    for jj in range(len(lat)):
+    ## Initialize ID counter 
+    fid = 1
 
-        # Loop over depth
-        for zz in range(len(depth)):
-            if zz == 0:
-               # Initialize collecting current values for the surface depth
-               current_str = f"{depth[zz]} ["
-            else:
-               # Collecting current values for this depth
-               # MITgcm has negative depth while K-Sim takes positive depth
-               current_str = current_str + "|" + f"{-depth[zz]}" + "[" 
-            
-            # Initialize a list to collect time, speed, direction for each time step 
-            time_speed_dir_list = []
+    ## Loop over spatial coordinates
+    for ii, lon_val in enumerate(lon):
+        for jj, lat_val in enumerate(lat):
+            # Initialize a list to collect time, speed, direction for all time step for each depth 
+            current_str = []
 
-            # Loop over time
-            for tt in range(len(t)):
-                # Access the currents in m/s
-                U  = 0 
-                V  = ds['v'][tt, zz, jj, ii].data
-                # find direction of currents in radians
-                DIR = np.pi/2 - math.atan2(V,U)  
-                # Add to the time-speed-direction list with the time in s 
-                time_speed_dir_list.append(f"{t[tt]},{abs(np.round(V,2))},{DIR}")
+            for zz, depth_val in enumerate(depth):
+                # Depth
+                # MITgcm uses negative depth, K-Sim requires positive depth
+                depth_label = f"{depth[zz]}" if zz == 0 else f"{-depth[zz]}"
+                # Initialize a list to collect time, speed, direction for each time step 
+                time_speed_dir_list = []
 
-            # Join time-speed-direction entries into a single string for this depth
-            current_str += ','.join(time_speed_dir_list) + "]" 
+                ## Loop over time
+                for tt, time_val in enumerate(t):
+                    # U component is zero
+                    U = 0 
+                    # V component from dataset 
+                    V = ds['v'][tt, zz, jj, ii].data 
+                    # Current direction in radians 
+                    DIR = np.pi/2 - math.atan2(V, U)
+                    # Add to the time-speed-direction list with the time in s 
+                    time_speed_dir_list.append(f"{int(time_val)},{abs(np.round(V, 2))},{DIR}")
 
-        feature = {
-            "type": "Feature",
-            "properties": {
-             "fid": int(fid),
-             "Period": int(t[-1]+15),
-             "Current": current_str
-            },
-            "geometry": {
-             "type": "Point",
-             "coordinates": [lon[ii], lat[jj]]
+                # Join time-speed-direction entries into a single string for this depth
+                current_str.append(f"{depth_label}[" + ",".join(time_speed_dir_list) + "]")
+
+            feature = {
+                "type": "Feature",
+                "properties": {
+                    "fid": fid,
+                    "Period": int(t[-1] + dt),
+                    "Current": "|".join(current_str),
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [lon_val, lat_val],
+                },
             }
-        }
-        geojson_data["features"].append(feature)
-        fid += 1
 
-### close netcdf file
-ds.close()
+            geojson_data["features"].append(feature)
+            fid += 1
 
+## Function to convert NumPy data types to standard Python types
 def convert_numpy_types(obj):
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()  # Convert numpy arrays to lists
+    if isinstance(obj, (np.ndarray, list)):
+        return [convert_numpy_types(item) for item in obj]
     elif isinstance(obj, np.generic):
-        return obj.item()  # Convert numpy types to Python scalars
+        return obj.item()
     elif isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_numpy_types(item) for item in obj]
-    else:
-        return obj  # Return the object if it's not a NumPy type
+    return obj
 
-# Convert geojson_data to remove NumPy types
+## Convert data and save GeoJSON file
 geojson_data_clean = convert_numpy_types(geojson_data)
 
 # Write the geojson data to a file
-fgeo = rdir + '/GeoJSON/' + exp + ".GeoJSON"
+fgeo = f"{rdir}/GeoJSON/{exp}.GeoJSON"
 with open(fgeo, "w") as geojson_file:
-    #json.dump(geojson_data_clean, geojson_file, indent=4)
     json.dump(geojson_data_clean, geojson_file)
+
 
