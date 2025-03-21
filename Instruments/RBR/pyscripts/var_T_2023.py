@@ -44,12 +44,12 @@ for tt in range(all_depths.shape[1]):
         # Index of first valid temperature 
         first_valid_idx = valid_ind[0]
         # Set to water level
-        all_depths[first_valid_idx, tt] = pressure_data[tt]
+        all_depths[first_valid_idx, tt] = pressure_data.iloc[tt] 
 
 # Step 3: Compute dz for the depth-weighted temperature
 dz = rsk.compute_dz(all_depths)
 
-# Step 4: Compute variance for the temperature along the depth
-variance_depth = rsk.compute_variance_depth(all_temp=[], dz=dz)
+# Step 4: Compute the std for the temperature along the depth
+weighted_temp, std_temp = rsk.compute_std_temp(all_temp, dz=dz)
 
 

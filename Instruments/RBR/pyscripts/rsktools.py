@@ -202,9 +202,9 @@ def compute_dz(all_depths):
      
     return dz
 
-def compute_variance_depth(all_temp, dz):
+def compute_std_temp(all_temp, dz):
     """
-    Compute the variance of the temperature along the depth for each time.
+    Compute the std of the temperature along the depth for each time.
     Parameters:
     -----------
     all_temp: np.ndarray 
@@ -214,18 +214,19 @@ def compute_variance_depth(all_temp, dz):
 
     Returns:
     --------
-    np.ndarray for the temperature variance 
+    np.ndarray for the weighted-depth temperature and the temperature std 
     """
-    variance_temp = np.ones(all_temp.shape[1]) * np.nan
+    weighted_temp = np.ones(all_temp.shape[1]) * np.nan
+    std_temp      = np.ones(all_temp.shape[1]) * np.nan
     for tt in range(all_temp.shape[1]):
         # Temperature at time tt
         temp_t = all_temp[:, tt]
         # Depth difference at time tt
         dz_t = dz[:, tt]
         # Compute depth-weighted average temperature
-        weighted_avg_temp = np.nansum(temp_t * dz_t) / np.nansum(dz_t)
-        # Compute temperature variance
-        variance_temp[tt] = np.nansum(((temp_t - weighted_avg_temp) ** 2) * dz_t) / np.nansum(dz_t)
+        weighted_temp[tt] = np.nansum(temp_t * dz_t) / np.nansum(dz_t)
+        # Compute temperature std
+        std_temp[tt] = np.sqrt(np.nansum(((temp_t - weighted_avg_temp) ** 2) * dz_t) / np.nansum(dz_t))
 
-    return variance_temp
+    return weighted_temp, std_temp
 
