@@ -5,6 +5,7 @@
 ###################################
 # import modules
 import pandas     as pd
+import numpy      as np
 from   pyrsktools import RSK
 
 def winmean_rsk_data(dirRSK, file, variable, window_size=5, threshold=0):
