@@ -226,7 +226,7 @@ def compute_std_temp(all_temp, dz):
         # Compute depth-weighted average temperature
         weighted_temp[tt] = np.nansum(temp_t * dz_t) / np.nansum(dz_t)
         # Compute temperature std
-        std_temp[tt] = np.sqrt(np.nansum(((temp_t - weighted_avg_temp) ** 2) * dz_t) / np.nansum(dz_t))
+        std_temp[tt] = np.sqrt(np.nansum(((temp_t - weighted_temp[tt]) ** 2) * dz_t) / np.nansum(dz_t))
 
     return weighted_temp, std_temp
 

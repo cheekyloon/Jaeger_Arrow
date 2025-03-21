@@ -2,7 +2,7 @@
 
 # This script load temperature field from rsk thermometers
 # Temperatures are masked above sea level using pressure data
-# The variance of temperature is computed along the depth using
+# The std of temperature is computed along the depth using
 # the depth-weighted temperature
 
 # import modules
