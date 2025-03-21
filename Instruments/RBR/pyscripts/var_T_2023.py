@@ -29,10 +29,11 @@ t0         = pd.to_datetime('2023-09-15 15:30:00')
 tend       = pd.to_datetime('2023-11-01 16:30:00')
 
 # Step 1: Load pressure data from the last RSK file '230890_20231101_1849.rsk'
-df_pressure = rsk.load_rsk_data(dirRSK, fileRSK[-1], 'pressure', t0, tend, -9.13)
+df_pressure   = rsk.load_rsk_data(dirRSK, fileRSK[-1], 'pressure', t0, tend, -9.13)
+pressure_data = df_pressure['pressure']
 
 # Step 2: Process all temperature files and mask temperature and depths above the free surface 
-all_temp, all_depths = rsk.mask_above_surf(dirRSK, fileRSK, zSolo, df_pressure['pressure'], t0, tend)
+all_temp, all_depths = rsk.mask_above_surf(dirRSK, fileRSK, zSolo, pressure_data, t0, tend)
 
 # Loop over time to adjust the depth at the surface with pressure_data
 for tt in range(all_depths.shape[1]):
