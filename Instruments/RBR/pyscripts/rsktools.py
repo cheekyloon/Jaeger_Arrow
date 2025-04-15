@@ -164,6 +164,88 @@ def mask_above_surf(dirRSK, fileRSK, zSolo, pressure_data, t0, tend):
     return np.array(all_temp), np.array(all_depths)
 
 
+def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
+    """
+    Interpolates all_var onto a regular vertical grid (surface to bottom)
+    and averages over the top top_depth m from the surface (time-varying).
+
+    Parameters:
+    -----------
+    all_var        : np.ndarray
+        2D array (depth x time)
+    all_z          : np.ndarray
+        2D array of corresponding depths (depth x time)
+    pressure_data  : pd.Series
+        Time series of free surface pressure (used to define the surface position)
+    dz             : float
+        Vertical resolution in meters (default = 0.5 m)
+    top_depth      : float
+        Depth range to average from the surface downward (default = 10 m)
+
+    Returns:
+    --------
+    mean_var       : np.ndarray
+        1D array of mean variable in the top 10 m (length = time)
+    interp_var     : np.ndarray
+        2D array of interpolated variable (z_grid x time)
+    z_grid         : np.ndarray
+        1D array of vertical grid levels from surface to bottom (top_depth range)
+    """
+
+    # number of time steps
+    nt = all_var.shape[1] 
+    # number of vertical levels
+    nz = int(np.ceil(top_depth / dz)) + 1
+
+    # Initialize output arrays
+    interp_var = np.full((nz, nt), np.nan)
+    z_grid     = np.full((nz, nt), np.nan)
+    mean_var   = np.full(nt, np.nan)
+
+    for t in range(nt):
+        # Extract column for this time step
+        var_col = all_var[:, t]
+        z_col   = all_z[:, t]
+        # Extract sea surface level 
+        z_surf   = pressure_data.iloc[t]
+
+        # Replace the first valid z value with the surface value (pressure_data)
+        valid = np.where(~np.isnan(z_col))[0]
+        if len(valid) > 0:
+            z_col[valid[0]] = z_surf 
+
+        # create a mask to remove NaNs
+        mask = ~np.isnan(var_col) & ~np.isnan(z_col)
+        # not enough data to interpolate 
+        if np.sum(mask) < 2:
+            continue  
+
+        # Remove NaNs
+        z_valid   = z_col[mask]
+        var_valid = var_col[mask]
+
+        # Sort data by depth (ascending for interp)
+        sorted_idx = np.argsort(z_valid)
+        z_sorted   = z_valid[sorted_idx]
+        var_sorted = var_valid[sorted_idx]
+
+        # Create vertical grid from current surface
+        z_grid_z = np.arange(z_surf, z_surf - top_depth -dz, -dz)
+
+        # Interpolate onto increasing z_grid (bottom to surface),
+        # then reverse to get back to surface-to-bottom orientation
+        interp_col = np.interp(np.sort(z_grid_z), z_sorted, var_sorted, left=np.nan, right=np.nan)
+        # flip back to surface-to-bottom
+        interp_var[:, t] = interp_col[::-1]  
+
+        # get the time-varying grid
+        z_grid[:, t] = z_grid_z
+
+        # Average in top 10 m
+        mean_var[t] = np.nanmean(interp_var[:, t])
+
+    return mean_var, interp_var, z_grid
+
 def compute_dz(all_depths, pressure_data):
     """
     Compute dz (depth differences) along the time series.
@@ -206,6 +288,31 @@ def compute_dz(all_depths, pressure_data):
     return dz
 
 def weight_avg_z(var, dz):
+    """
+    Compute the weighted average of a variable, such as the temperature, along the depth for each time.
+    Parameters:
+    -----------
+    var: np.ndarray 
+        Array with shape (depth, time)
+    dz : np.ndarray
+        Array of depth difference with shape (depth, time) used for the weighted average 
+
+    Returns:
+    --------
+    np.ndarray for the weighted-depth variable
+    """
+    avg_z = np.ones(var.shape[1]) * np.nan
+    for tt in range(var.shape[1]):
+        # Variable at time tt
+        var_t = var[:, tt]
+        # Depth difference at time tt
+        dz_t  = dz[:, tt]
+        # Compute depth-weighted average 
+        avg_z[tt] = np.nansum(var_t * dz_t) / np.nansum(dz_t)
+
+    return avg_z
+
+def mean_10(var, dz):
     """
     Compute the weighted average of a variable, such as the temperature, along the depth for each time.
     Parameters:
