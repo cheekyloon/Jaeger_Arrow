@@ -4,9 +4,10 @@
 
 ###################################
 # import modules
-import pandas          as pd
-import numpy           as np
-import rsktools        as rsk
+import pandas            as pd
+import numpy             as np
+import rsktools          as rsk
+import matplotlib.pyplot as plt
 from scipy             import signal
 from pyrsktools        import RSK
 from sklearn.neighbors import NearestNeighbors
@@ -73,24 +74,29 @@ def winmean_rsk_data(dirRSK, file, variable, window_size=5, threshold=0):
     
     return dfm
 
-def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0):
+def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0,
+                  apply_rolling=False, window_size=900):
     """
     Load and filter RSK data for a given variable (e.g., pressure or temperature).
 
     Parameters:
     -----------
-    dirRSK      : str
+    dirRSK        : str
         The directory path where the RSK file is located.
-    file        : str
+    file          : str
         The name of the RSK file to be processed.
-    variable    : str
+    variable      : str
         The key to extract the variable data from the RSK object.
-    t0          : pd.Timestamp
+    t0            : pd.Timestamp
         The start time for filtering the data.
-    tend        : pd.Timestamp
+    tend          : pd.Timestamp
         The end time for filtering the data.
-    threshold   : float, optional (default=0)
+    threshold     : float, optional (default=0)
         A value to be added to the extracted data (useful for pressure correction).
+    apply_rolling : bool, optional (default=False)
+        Whether to apply a rolling mean to the data.
+    window_size   : int, optional (default=900)
+        The size of the rolling window if apply_rolling is True.
 
     Returns:
     --------
@@ -108,11 +114,14 @@ def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0):
         variable: rsk.data[variable] + threshold
     }).set_index('timestamp')
 
+    # Apply rolling mean if requested
+    if apply_rolling:
+        df[variable] = df[variable].rolling(window=window_size, center=True).mean()
+
     # Apply time filtering
     df_filtered = df.loc[t0:tend]
 
     return df_filtered
-
 
 def mask_above_surf(dirRSK, fileRSK, zSolo, pressure_data, t0, tend):
     """
@@ -164,10 +173,10 @@ def mask_above_surf(dirRSK, fileRSK, zSolo, pressure_data, t0, tend):
     return np.array(all_temp), np.array(all_depths)
 
 
-def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
+def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, depth=10):
     """
     Interpolates all_var onto a regular vertical grid (surface to bottom)
-    and averages over the top top_depth m from the surface (time-varying).
+    and averages over the top depth m from the surface (time-varying).
 
     Parameters:
     -----------
@@ -179,7 +188,7 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
         Time series of free surface pressure (used to define the surface position)
     dz             : float
         Vertical resolution in meters (default = 0.5 m)
-    top_depth      : float
+    depth          : float
         Depth range to average from the surface downward (default = 10 m)
 
     Returns:
@@ -189,13 +198,13 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
     interp_var     : np.ndarray
         2D array of interpolated variable (z_grid x time)
     z_grid         : np.ndarray
-        1D array of vertical grid levels from surface to bottom (top_depth range)
+        1D array of vertical grid levels from surface to bottom (depth range)
     """
 
     # number of time steps
     nt = all_var.shape[1] 
     # number of vertical levels
-    nz = int(np.ceil(top_depth / dz)) + 1
+    nz = int(np.ceil(depth / dz)) + 1
 
     # Initialize output arrays
     interp_var = np.full((nz, nt), np.nan)
@@ -230,7 +239,7 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
         var_sorted = var_valid[sorted_idx]
 
         # Create vertical grid from current surface
-        z_grid_z = np.arange(z_surf, z_surf - top_depth -dz, -dz)
+        z_grid_z = np.arange(z_surf, z_surf - depth -dz, -dz)
 
         # Interpolate onto increasing z_grid (bottom to surface),
         # then reverse to get back to surface-to-bottom orientation
@@ -241,7 +250,7 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, top_depth=10):
         # get the time-varying grid
         z_grid[:, t] = z_grid_z
 
-        # Average in top 10 m
+        # Average in top 'depth' m
         mean_var[t] = np.nanmean(interp_var[:, t])
 
     return mean_var, interp_var, z_grid
@@ -337,6 +346,29 @@ def mean_10(var, dz):
 
     return avg_z
 
+def lp_filter(var, timestamps, Fc, N_but):
+    """
+    Applies a lowpass Butterworth filter to an array .
+    
+    Parameters:
+    - var        : np.ndarray, shape (time,) 
+    - timestamps : pd.DatetimeIndex corresponding to the time axis
+    - Fc         : cutoff frequency in Hz 
+    - N_but      : Order of the Butterworth filter 
+
+    Returns:
+    - var_flp    : np.ndarray of filtered data (same shape as input)
+    """
+    # Calculate sampling interval and frequency
+    dt = (timestamps[1] - timestamps[0]).total_seconds()
+    Fs = 1 / dt
+    # Nyquist frequency
+    Fn = Fs / 2 
+    # Design Butterworth bandpass filter
+    b, a = signal.butter(N_but, Fc/Fn)
+
+    return signal.filtfilt(b, a, var)
+
 def bp_filter(var, timestamps, Fc_low, Fc_high, N_but):
     """
     Applies a bandpass Butterworth filter to an array (time-dependent or depth x time).
@@ -372,14 +404,16 @@ def bp_filter(var, timestamps, Fc_low, Fc_high, N_but):
     else:
         raise ValueError("Input var array must be 1D or 2D (depth x time).")
 
-def M2_phase_avg(df_pressure, y, N_bin):
+def M2_phase_avg(df_pressure, timestamps, y, N_bin, plot=False):
     """
     This function computes phase averages over an M2 semi-diurnal tidal cycle.
 
     INPUT:
-        df_pressure: A DataFrame with a 'pressure' column and a datetime index.
+        df_pressure: A DataFrame with pressure
+        timestamps : pd.DatetimeIndex corresponding to the time axis
         y          : Variable to phase-average. Can be 1D (time,) or 2D (depth, time)
         N_bin      : The number of averaging bins
+        Plot       : Make a figure of the harmonic fit reconstruction (default: False) 
 
     OUTPUT:
         phi_bin: Phase of each bin center (length = N_bin)
@@ -389,10 +423,10 @@ def M2_phase_avg(df_pressure, y, N_bin):
     w = 2 * np.pi / (3600 * 12.4206012025189)
 
     # Remove mean from pressure
-    h = df_pressure['pressure'].values - df_pressure['pressure'].mean()
+    h = df_pressure.values - df_pressure.mean()
 
     # Time in seconds
-    t = (df_pressure.index - df_pressure.index[0]).total_seconds().to_numpy()
+    t = (timestamps - timestamps[0]).total_seconds().to_numpy()
     # Get the number of data points
     N = len(t)
 
@@ -404,8 +438,27 @@ def M2_phase_avg(df_pressure, y, N_bin):
     # The phase shift (phi0) is what we need from the coefficients
     phi0 = np.arctan2(coef[2], coef[1])
 
-    # Wrapped phase from -pi to pi
-    phi_wrap = np.arctan2(np.sin(w * t + phi0), np.cos(w * t + phi0))
+    # Harmonic fit reconstruction (to find max phase)
+    h_fit = coef[0] + coef[1] * np.sin(w * t) + coef[2] * np.cos(w * t)
+    # plot harmonic fit
+    if plot:
+       # plot h_fit vs h
+       plt.ion()
+       plt.figure()
+       plt.plot(timestamps, h, color='b', label='h')
+       plt.plot(timestamps, h_fit, color='r', label='h_fit')
+       plt.legend()
+       plt.xlabel('Time')
+       plt.xlabel('h (m)')
+
+    # Time index of maximum (high tide)
+    #i_max = np.argmax(h_fit)
+    # Phase corresponding to high tide (we want this to map to phase 0)
+    #phi_high = np.arctan2(np.sin(w * t[i_max] + phi0), np.cos(w * t[i_max] + phi0))
+    # Wrapped phase from -pi to pi, but add a shift of -pi/2
+    phi_wrap = np.arctan2(np.sin(w * t + phi0 - np.pi), np.cos(w * t + phi0 - np.pi))
+    # Shift phases so that high tide aligns with phase 0
+    #phi_wrap = np.arctan2(np.sin(w * t + phi0 - phi_high), np.cos(w * t + phi0 - phi_high))
 
     # Define bins
     dphi = 2 * np.pi / N_bin
