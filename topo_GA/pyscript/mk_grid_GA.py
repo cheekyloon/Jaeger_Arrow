@@ -6,23 +6,29 @@ focused on the Grande-Anse terminal (Port Saguenay, Québec).
 
 This script performs the following steps:
 1. Loads a high-resolution bathymetric survey around the Grande-Anse wharf (in MTM Zone 7).
-2. Loads a lower-resolution bathymetric map of the Saguenay fjord (LAT, LON, Z from .mat file).
-3. Converts all coordinates to MTM (EPSG:2949) and rotates them so that the wharf becomes aligned
-   with the southern edge of the model grid.
-4. Interpolates both datasets onto a common high-resolution grid (1 m).
-5. Merges the datasets by preserving the Grande-Anse data where available.
-6. Applies a digitized land mask (created manually) to exclude non-ocean regions.
-7. Produces a masked bathymetry ready to be exported to MITgcm (.bin files).
+2. Loads a lower-resolution bathymetric map of the Saguenay Fjord (LAT, LON, Z from .mat file).
+3. Converts all coordinates to MTM Zone 7 (EPSG:2949) and rotates the domain so that
+   the wharf aligns with the southern edge of the model grid.
+4. Interpolates both datasets onto a common high-resolution grid (1 m spacing).
+5. Merges the datasets, preserving the high-resolution survey where available.
+6. Applies a digitized shoreline mask to exclude land areas from the domain.
+7. Produces a masked bathymetry field ready for use in MITgcm (.bin format).
 
 Input files:
-- High-res .xyz survey file (x, y in meters, z in meters)
-- Wharf coordinates (.dat file with 2 points)
-- Low-res .mat file with LAT, LON, Z variables
-- Digitized shoreline mask (.dat file from DigitTable)
+- High-resolution .xyz survey file (x, y in meters, z in meters relative to NMMB)
+- Wharf coordinates (.dat file with 2 reference points)
+- Low-resolution .mat file with LAT, LON, Z variables from CHS NONNA bathymetry
+- Digitized shoreline mask (.dat file created manually using DigitTable)
+
+Vertical references:
+- High-resolution survey is referenced to mean low water level (NMMB),
+  which is 2.76 meters below CGVD28.
+- CHS NONNA bathymetry is referenced to chart datum (CD).
+  [Source: https://open.canada.ca/data/en/dataset/d3881c4c-650d-4070-bf9b-1e00aabf0a1d]
 
 Output:
-- 2D bathymetry array aligned with the rotated wharf and suitable for MITgcm
-- Optional visualization to inspect bathymetry and masking
+- 2D masked bathymetry array aligned with the rotated domain
+- Optional visualization to inspect interpolation and masking steps
 
 Author: Sandy Gregorio
 Date: June 2025
@@ -129,7 +135,8 @@ x_hr, y_hr = np.arange(-domain_half_width, domain_half_width + res, res), np.ara
 grid_x, grid_y = np.meshgrid(x_hr, y_hr)
 
 # Interpolate both datasets onto final grid
-z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y)
+z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y) - 2.76
+#z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y)
 z_hr_fjord = interpolate_to_grid(coords_fjord_rot, Z_sub, grid_x, grid_y)
 
 # Combine Grande-Anse and fjord bathymetry
