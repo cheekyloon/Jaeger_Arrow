@@ -135,126 +135,71 @@ z_hr_fjord = interpolate_to_grid(coords_fjord_rot, Z_sub, grid_x, grid_y)
 # Combine Grande-Anse and fjord bathymetry
 z_combined = np.where(~np.isnan(z_hr_ga), z_hr_ga, z_hr_fjord)
 
+
 ### === Apply land mask === ###
 
 # Rotate the digitized shoreline mask (quay contour)
 mask_coords_rot = rotate_coordinates(mask_coords, origin, -theta)
 
-# Rotate extracted coastline contours (from .mat file)
+# Rotate extracted coastline contours from the .mat file
 contour_0_rot = rotate_coordinates(np.column_stack((X0_sub, Y0_sub)), origin, -theta)  # North shore
 contour_1_rot = rotate_coordinates(np.column_stack((X1_sub, Y1_sub)), origin, -theta)  # South shore
 
-# --- Merge the digitized quay segment with southern shoreline ---
+# --- Merge the digitized quay segment with the southern shoreline ---
 
-# Build a KDTree from the rotated southern shoreline (contour_1_rot)
+# Build a KDTree for the southern shoreline to find nearest points
 tree = cKDTree(contour_1_rot)
-
-# Query the closest point on the shoreline for each digitized mask point
 distances, indices = tree.query(mask_coords_rot)
 
-# Select the segment of the digitized mask that corresponds to the wharf
-# (manually validated range: mask_coords_rot[24:50])
-quay_segment = mask_coords_rot[24:50]
+# Manually select the quay segment from the digitized mask (validated range)
+quay_segment = mask_coords_rot[24:50][::-1]  # Reversed to match shoreline orientation
 
-# Get corresponding indices on the southern shoreline
+# Get corresponding index range on the southern shoreline
 i_start = indices[24]
 i_end   = indices[49]
 
-# Ensure the order is increasing for proper slicing
+# Ensure correct slicing order (west to east)
 if i_start > i_end:
     i_start, i_end = i_end, i_start
 
-# Extract sections of the southern shoreline before and after the quay
-before_quay = contour_1_rot[i_end+1:]
-after_quay  = contour_1_rot[:i_start]
+# Extract shoreline segments before and after the quay
+# Note: contour_1_rot is assumed to be ordered west → east
+before_quay = contour_1_rot[:i_start]      # Segment before quay (west side)
+after_quay  = contour_1_rot[i_end+1:]      # Segment after quay (east side)
 
-# Combine all parts to form the merged southern shoreline
+# Combine the full southern shoreline including the quay
 merged_shoreline = np.vstack([
     before_quay,
     quay_segment,
     after_quay
 ])
 
-# --- Construct the water polygon between north and south shorelines ---
+# --- Build a closed polygon enclosing the water region ---
 
-# Define shorelines
-south = merged_shoreline          # Southern shoreline (with quay)
-north = contour_0_rot[::-1]       # Northern shoreline (reversed to close the polygon clockwise)
+# The polygon follows:
+# 1. The southern shoreline eastward (with quay inserted),
+# 2. A vertical connector up to the northern shore (east side),
+# 3. The northern shoreline westward (reversed),
+# 4. A vertical connector down to the southern shore (west side),
+# forming a closed rectangular-like loop.
 
-# Add artificial vertical connectors to close the polygon as a rectangle
-pt_east = [south[-1][0], north[0][1]]   # Eastern corner (vertical segment)
-pt_west = [south[0][0], north[-1][1]]   # Western corner (vertical segment)
+# Define southern and northern shorelines
+south = merged_shoreline
+north = contour_0_rot[::-1]  # Reversed to maintain clockwise orientation
 
-# Stack the full polygon: south → east connector → north → west connector
+# Add vertical connectors at both ends of the polygon
+pt_east = [south[-1][0], north[0][1]]   # Eastern connector (top-right corner)
+pt_west = [south[0][0], north[-1][1]]   # Western connector (top-left corner)
+
+# Combine all segments to form the final polygon
 polygon_coords = np.vstack([
-    south,        # Step 1: walk along southern shoreline
-    pt_east,      # Step 2: connect up to north shore (east side)
-    north,        # Step 3: walk along northern shoreline (westward)
-    pt_west       # Step 4: connect down to starting point (west side)
+    south,        # Step 1: southern shore (incl. quay)
+    pt_east,      # Step 2: vertical connector up (east)
+    north,        # Step 3: northern shore (westward)
+    pt_west       # Step 4: vertical connector down (west)
 ])
 
-# --- Apply the polygon mask to exclude land regions ---
-mask_polygon      = apply_mask(grid_x, grid_y, polygon_coords)
-grid_depth_masked = np.where(mask_polygon, z_combined, np.nan)
-
-
-
-# Merge digitized shoreline mask with coastline contours
-# Construire l'arbre pour la rive sud
-tree = cKDTree(contour_1_rot)
-# Chercher le plus proche voisin pour chaque point du quai
-distances, indices = tree.query(mask_coords_rot)
-# Trouver les deux plus proches
-nearest_two = np.argsort(distances)
-# using
-# Points du quai les plus proches
-closest_mask_points = mask_coords_rot[nearest_two]
-
-
-
-i_start = indices[2]
-i_end   = indices[26]
-
-# Partie avant (rive sud avant le quai)
-before_quay = contour_1_rot[:i_start]
-
-# Partie centrale : le quai (segment digitalisé)
-quay_segment = mask_coords_rot[2:27]  # [2:26+1]
-
-# Partie après (rive sud après le quai)
-after_quay = contour_1_rot[i_end+1:]
-
-# Merger les segments
-merged_shoreline = np.vstack([
-    before_quay,
-    quay_segment,
-    after_quay
-])
-
-# Build a closed polygon representing the water area between the northern and southern shores.
-# The polygon is constructed by:
-# 1. Following the southern shoreline eastward (contour_1_rot),
-# 2. Adding a vertical connection up to the northern shore (east side),
-# 3. Following the northern shoreline westward (contour_0_rot[::-1]),
-# 4. Adding a vertical connection back down to the southern shore (west side),
-# to form a rectangular envelope around the water domain.
-
-south = merged_shoreline                 # Southern shoreline (eastward)
-north = contour_0_rot[::-1]           # Northern shoreline (westward)
-
-# Define artificial vertical corner points to close the polygon as a rectangle
-pt_east = [south[-1][0], north[0][1]]  # Top-right corner (east)
-pt_west = [south[0][0], north[-1][1]]  # Top-left corner (west)
-
-# Stack all points to form the closed polygon
-polygon_coords = np.vstack([
-    south,        # Step 1: walk along southern shore
-    pt_east,      # Step 2: connect upward to northern shore (east)
-    north,        # Step 3: walk along northern shore (reversed)
-    pt_west       # Step 4: connect downward to southern shore (west)
-])
-
-# Create mask from the polygon and apply it
+# --- Apply the mask based on the polygon ---
 mask_polygon      = apply_mask(grid_x, grid_y, polygon_coords)
 grid_depth_masked = np.where(mask_polygon, z_combined, np.nan)
 
@@ -267,10 +212,10 @@ c = plt.pcolormesh(grid_x, grid_y, grid_depth_masked, shading='auto', cmap='viri
 plt.colorbar(c, label='Depth (m)')
 
 # Show masks
-plt.plot(mask_coords_rot[:, 0], mask_coords_rot[:, 1], 'm-', lw=2, label='Digitized shoreline')
+#plt.plot(mask_coords_rot[:, 0], mask_coords_rot[:, 1], 'm-', lw=2, label='Digitized shoreline')
 plt.plot(contour_0_rot[:, 0], contour_0_rot[:, 1], 'r-', lw=2, label='Shoreline 0')
-plt.plot(contour_1_rot[:, 0], contour_1_rot[:, 1], 'b-', lw=2, label='Shoreline 1')
-plt.plot(closest_mask_points[2, 0], closest_mask_points[2, 1], 'o', markersize=8, label='Closest mask→shore')
+#plt.plot(contour_1_rot[:, 0], contour_1_rot[:, 1], 'b-', lw=2, label='Shoreline 1')
+plt.plot(merged_shoreline[:, 0], merged_shoreline[:, 1], 'k-', lw=2, label='Shoreline 1')
 # Axis and labels
 plt.xlim(-1100, 1100)
 plt.ylim(-500, 2200)
