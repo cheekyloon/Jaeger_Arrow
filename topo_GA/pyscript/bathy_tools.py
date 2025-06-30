@@ -4,14 +4,22 @@ from matplotlib.path   import Path
 from pyproj            import Transformer
 from scipy.interpolate import griddata
 
-def rotate_coordinates(points, origin, theta_deg):
+def compute_rotation_angle(x1, y1, x2, y2):
     """
-    Rotate a set of 2D points (Nx2) around an origin by a given angle in degrees.
+    Compute the angle (in radians) between the line (x1, y1) to (x2, y2)
+    and the horizontal x-axis.
     """
-    theta_rad = np.radians(theta_deg)
+    dx = x2 - x1
+    dy = y2 - y1
+    return np.arctan2(dy, dx)
+
+def rotate_coordinates(points, origin, theta_rad):
+    """
+    Rotate a set of 2D points (Nx2) around an origin by a given angle in radians.
+    """
     R = np.array([
-        [np.cos(-theta_rad), -np.sin(-theta_rad)],
-        [np.sin(-theta_rad),  np.cos(-theta_rad)]
+        [np.cos(theta_rad), -np.sin(theta_rad)],
+        [np.sin(theta_rad),  np.cos(theta_rad)]
     ])
     return (points - origin) @ R.T
 
@@ -26,40 +34,40 @@ def apply_mask(grid_x, grid_y, polygon_coords):
     """
     Create a boolean mask over a grid where True = inside polygon.
     """
-    path = Path(polygon_coords)
+    path   = Path(polygon_coords)
     points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
     return path.contains_points(points).reshape(grid_x.shape)
 
 def rotate_topography(df_xyz, x1, y1, x2, y2, reso=1.0, method='linear', fill_value=np.nan, origin=None):
     """
-    Rotate a bathymetry DataFrame so that the line (x1, y1)-(x2, y2) becomes horizontal.
-    Allows custom rotation origin (e.g., center of the wharf).
+    Rotate a bathymetry DataFrame so that a reference line (e.g., a wharf)
+    becomes aligned with the x-axis (horizontal), and interpolate the rotated 
+    bathymetry onto a regular 2D grid.
 
     Parameters:
-    - df_xyz : DataFrame with columns ['x', 'y', 'z']
-    - x1, y1, x2, y2 : points defining the dock line
-    - reso : resolution of the output grid (default 1.0 m)
-    - method : interpolation method for griddata
-    - fill_value : value assigned to missing points in interpolation
-    - origin : optional (x, y) point used as rotation center. If None, defaults to (x1, y1)
+    - df_xyz : DataFrame with columns ['x', 'y', 'z'] in projected coordinates (e.g., MTM)
+    - x1, y1 : Coordinates of the first reference point (e.g., west corner of the wharf)
+    - x2, y2 : Coordinates of the second reference point (e.g., east corner of the wharf)
+    - reso : Grid resolution in meters (default = 1.0)
+    - method : Interpolation method used in `griddata` ('linear', 'nearest', or 'cubic')
+    - fill_value : Value used to fill grid points without valid data
+    - origin : Optional (x, y) tuple or array specifying the center of rotation.
+               If None, defaults to the first point (x1, y1)
 
     Returns:
-    - grid_x_rot, grid_y_rot : 2D meshgrid of rotated coordinates
-    - grid_depth_rot : interpolated depth field
-    - theta_deg : applied rotation angle (degrees)
-    - df_xyz[['x_rot', 'y_rot']] : DataFrame with rotated coordinates
+    - grid_x_rot, grid_y_rot : 2D meshgrid arrays in the rotated coordinate system
+    - grid_depth_rot         : Bathymetry interpolated onto the rotated grid
+    - theta_rad              : Rotation angle in radians (negative, to align the line horizontally)
     """
-    dx = x2 - x1
-    dy = y2 - y1
-    theta_rad = np.arctan2(dy, dx)
-    theta_deg = np.degrees(theta_rad)
+    # Compute rotation angle
+    theta_rad = compute_rotation_angle(x1, y1, x2, y2) 
 
     # Define rotation origin
     if origin is None:
         origin = np.array([x1, y1])
 
-    coords = df_xyz[['x', 'y']].values
-    coords_rot = rotate_coordinates(coords, origin, theta_deg)
+    coords     = df_xyz[['x', 'y']].values
+    coords_rot = rotate_coordinates(coords, origin, -theta_rad)
 
     df_xyz['x_rot'] = coords_rot[:, 0]
     df_xyz['y_rot'] = coords_rot[:, 1]
@@ -70,14 +78,14 @@ def rotate_topography(df_xyz, x1, y1, x2, y2, reso=1.0, method='linear', fill_va
     grid_x_rot, grid_y_rot = np.meshgrid(xg_rot, yg_rot)
 
     # Interpolate depths on rotated grid
-    grid_depth_rot = interpolate_to_grid(
+    depth_rot = interpolate_to_grid(
         df_xyz[['x_rot', 'y_rot']].values,
         df_xyz['z'].values,
         grid_x_rot, grid_y_rot,
         method=method, fill_value=fill_value
     )
 
-    return grid_x_rot, grid_y_rot, grid_depth_rot, theta_deg, df_xyz[['x_rot', 'y_rot']]
+    return grid_x_rot, grid_y_rot, depth_rot, -theta_rad
 
 def convert_latlon_to_mtm(lon, lat):
     """
