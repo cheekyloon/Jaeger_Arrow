@@ -6,13 +6,17 @@ focused on the Grande-Anse terminal (Port Saguenay, Québec).
 
 This script performs the following steps:
 1. Loads a high-resolution bathymetric survey around the Grande-Anse wharf (in MTM Zone 7).
-2. Loads a lower-resolution bathymetric map of the Saguenay Fjord (LAT, LON, Z from .mat file).
+2. Loads a lower-resolution bathymetric map of the Saguenay Fjord. 
 3. Converts all coordinates to MTM Zone 7 (EPSG:2949) and rotates the domain so that
    the wharf aligns with the southern edge of the model grid.
 4. Interpolates both datasets onto a common high-resolution grid (1 m spacing).
-5. Merges the datasets, preserving the high-resolution survey where available.
-6. Applies a digitized shoreline mask to exclude land areas from the domain.
-7. Produces a masked bathymetry field ready for use in MITgcm (.bin format).
+5. Applies a digitized shoreline mask to exclude land areas from the domain.
+6. Examines the differences between the high- and low-resolution bathymetries 
+   within the overlap zone, visualizes these differences, and computes an average 
+   vertical offset to correct systematic biases.
+7. Applies the calculated offset to align the low-resolution bathymetry with the high-resolution survey.
+8. Merges the datasets, preserving the high-resolution survey where available.
+9. Produces a masked bathymetry field ready for use in MITgcm (.bin format).
 
 Input files:
 - High-resolution .xyz survey file (x, y in meters, z in meters relative to NMMB)
@@ -21,11 +25,16 @@ Input files:
 - Digitized shoreline mask (.dat file created manually using DigitTable)
 
 Vertical references:
-- High-resolution survey is referenced to mean low water level (NMMB),
-  which is 2.76 meters below CGVD28.
-- CHS NONNA bathymetry is referenced to chart datum (CD).
-  [Source: https://open.canada.ca/data/en/dataset/d3881c4c-650d-4070-bf9b-1e00aabf0a1d]
-
+- The high-resolution (HR)survey is referenced to mean low water level (Niveau moyen à marée basse – NMMB),
+  which is 2.76 meters below the Canadian Geodetic Vertical Datum 1928 (CGVD28) at Grande-Anse.
+- The CHS NONNA bathymetry is referenced to chart datum (CD), a locally derived tidal datum
+  typically chosen so that water levels rarely fall below it. According to the tidal station
+  at Grande-Anse (https://www.marees.gc.ca/fr/stations/03466), the chart datum is approximately
+  2.9 meters below CGVD28 at that location.
+- Therefore, to harmonize both datasets relative to chart datum (CD),
+  the HR bathymetry must be corrected by subtracting 0.14 meters
+  (i.e., 2.76 m − 2.9 m), assuming the CHS NONNA bathymetry is already referenced to CD.
+  This ensures both datasets are expressed consistently in the same vertical reference frame.
 Output:
 - 2D masked bathymetry array aligned with the rotated domain
 - Optional visualization to inspect interpolation and masking steps
@@ -42,7 +51,11 @@ import readwrite_input_mitgcm as rw
 from scipy.io                 import loadmat
 from scipy.spatial            import cKDTree
 from bathy_tools              import (
+    load_lr_bathy_from_txt,
     compute_rotation_angle,
+    build_variable_resolution,
+    plot_bathy_difference,
+    compute_hr_lr_offset_from_contour,
     rotate_coordinates,
     interpolate_to_grid,
     apply_mask,
@@ -50,23 +63,34 @@ from bathy_tools              import (
 )
 
 ### === Define file paths === ###
-rdir    = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/'
-HR_grid = rdir + 'CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_CUBE_0.3m.xyz'
-LR_grid = rdir + 'Fjord_50m.mat' 
-wharf   = rdir + 'Wharf_Grande-Anse.dat'
-fmask   = rdir + 'Grande-Anse_mask.dat'
-fcoast  = rdir + 'Saguenay_coastline.mat'
+rdir     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/'
+HR_grid  = rdir + 'CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_CUBE_0.3m.xyz'
+#HR_grid  = rdir + 'CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_MINIMUM_5m.xyz'
+LR_grid1 = rdir + 'NONNA10_4840N07090W.txt'
+LR_grid2 = rdir + 'NONNA10_4830N07090W.txt'
+wharf    = rdir + 'Wharf_Grande-Anse.dat'
+fmask    = rdir + 'Grande-Anse_mask.dat'
+fcoast   = rdir + 'Saguenay_coastline.mat'
+
+# Difference between HR and LR reference levels (in meters)
+# To express both datasets relative to chart datum (CD),
+# we need to lower the HR bathymetry by this amount.
+# HR is 2.76 m below CGVD28, CD is 2.9 m below CGVD28 → HR must go down by 0.14 m
+dz = (2.76 - 2.9) 
 
 ### === Load input data === ###
 # High-resolution Grande-Anse bathymetry (projected in MTM Zone 7)
 df = pd.read_csv(HR_grid, sep='\s+', header=None, names=['x', 'y', 'z'])
+# Apply correction to HR bathymetry
+# Adds a negative value (effectively subtracts 0.14 m)
+df['z'] = df['z'] + dz
 
-# Low-resolution fjord bathymetry (LAT, LON, Z)
-mat = loadmat(LR_grid)
-LAT = mat['LAT']
-LON = mat['LON']
-Z   = mat['Z']
-X, Y = convert_latlon_to_mtm(LON, LAT)  # WGS84 → MTM zone 7
+# Low-resolution fjord bathymetry
+X1, Y1, Z1 = load_lr_bathy_from_txt(LR_grid1, convert_latlon_to_mtm)
+X2, Y2, Z2 = load_lr_bathy_from_txt(LR_grid2, convert_latlon_to_mtm)
+X = np.concatenate([X1, X2])
+Y = np.concatenate([Y1, Y2])
+Z = np.concatenate([Z1, Z2])
 
 # Wharf endpoints (2 points, to define orientation)
 df_w = pd.read_csv(wharf, sep='\s+', header=None, names=['x', 'y', 'val'])
@@ -79,9 +103,7 @@ mask_coords = mask_df[['x', 'y']].values
 
 # Saguenay coastline (lat_coastline_Sag, lon_coastline_Sag)
 mat = loadmat(fcoast)
-LAT = mat['lat_coastline_Sag']
-LON = mat['lon_coastline_Sag']
-X_coast, Y_coast = convert_latlon_to_mtm(LON, LAT)
+X_coast, Y_coast = convert_latlon_to_mtm(mat['lon_coastline_Sag'], mat['lat_coastline_Sag'])
 
 ### === Prepare coordinate transformations === ###
 # Compute rotation angle to align the wharf horizontally
@@ -127,21 +149,30 @@ coords_fjord     = np.column_stack((X_sub, Y_sub))
 coords_fjord_rot = rotate_coordinates(coords_fjord, origin, -theta)
 
 # Define final model grid (in rotated coordinates)
-res = 1.0
-domain_half_width = 1000
-y_0   = 300
-y_end = 1900
-x_hr, y_hr = np.arange(-domain_half_width, domain_half_width + res, res), np.arange(-y_0, y_end + res, res)
+
+# X from -1000 to +1000 with fine zone from -200 to +200
+x_hr = build_variable_resolution(
+    center_start=-200, center_end=200,
+    full_start=-1000, full_end=1000,
+    d_fine=0.5, d_max=2.0
+)
+
+# Y from -300 to 1900 with fine zone from -100 to +300
+y_hr = build_variable_resolution(
+    center_start=-100, center_end=300,
+    full_start=-300, full_end=1900,
+    d_fine=0.5, d_max=2.0
+)
+
+# Create meshgrid
 grid_x, grid_y = np.meshgrid(x_hr, y_hr)
 
 # Interpolate both datasets onto final grid
-z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y) - 2.76
-#z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y)
+z_hr_ga    = interpolate_to_grid(df[['x_rot', 'y_rot']].values, df['z'].values, grid_x, grid_y) 
 z_hr_fjord = interpolate_to_grid(coords_fjord_rot, Z_sub, grid_x, grid_y)
 
 # Combine Grande-Anse and fjord bathymetry
-z_combined = np.where(~np.isnan(z_hr_ga), z_hr_ga, z_hr_fjord)
-
+#z_combined = np.where(~np.isnan(z_hr_ga), z_hr_ga, z_hr_fjord)
 
 ### === Apply land mask === ###
 
@@ -206,22 +237,39 @@ polygon_coords = np.vstack([
     pt_west       # Step 4: vertical connector down (west)
 ])
 
-# --- Apply the mask based on the polygon ---
-mask_polygon      = apply_mask(grid_x, grid_y, polygon_coords)
-grid_depth_masked = np.where(mask_polygon, z_combined, np.nan)
+# --- Apply polygon mask to limit the study area ---
+mask_polygon = apply_mask(grid_x, grid_y, polygon_coords)
+z_hr_ga      = np.where(mask_polygon, z_hr_ga, np.nan)
+z_hr_fjord   = np.where(mask_polygon, z_hr_fjord, np.nan)
+
+# --- Visualize the difference between HR and LR bathymetries within the HR zone ---
+diff = plot_bathy_difference(grid_x, grid_y, z_hr_ga, z_hr_fjord, show_figure=True)
+
+# --- Compute the average offset between HR and LR along the HR zone contour ---
+offset = compute_hr_lr_offset_from_contour(
+    grid_x, grid_y,
+    z_hr_ga, z_hr_fjord,
+    x_hr, y_hr,
+    distance_tol=1.0,
+    show_figure=True
+)
+
+# --- Apply the offset correction to the LR bathymetry ---
+z_hr_fjord_aligned = z_hr_fjord #+ offset
+
+# --- Merge bathymetries, prioritizing HR data where available ---
+z_combined = np.where(~np.isnan(z_hr_ga), z_hr_ga, z_hr_fjord_aligned)
 
 ### === Visualization === ###
 plt.ion()
 plt.figure(figsize=(10, 6))
 
 # Bathymetry
-c = plt.pcolormesh(grid_x, grid_y, grid_depth_masked, shading='auto', cmap='viridis')
+c = plt.pcolormesh(grid_x, grid_y, z_combined, shading='auto', cmap='viridis')
 plt.colorbar(c, label='Depth (m)')
 
 # Show masks
-#plt.plot(mask_coords_rot[:, 0], mask_coords_rot[:, 1], 'm-', lw=2, label='Digitized shoreline')
 plt.plot(contour_0_rot[:, 0], contour_0_rot[:, 1], 'r-', lw=2, label='Shoreline 0')
-#plt.plot(contour_1_rot[:, 0], contour_1_rot[:, 1], 'b-', lw=2, label='Shoreline 1')
 plt.plot(merged_shoreline[:, 0], merged_shoreline[:, 1], 'k-', lw=2, label='Shoreline 1')
 # Axis and labels
 plt.xlim(-1100, 1100)
