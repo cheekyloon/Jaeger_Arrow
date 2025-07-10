@@ -153,15 +153,15 @@ coords_fjord     = np.column_stack((X_sub, Y_sub))
 coords_fjord_rot = rotate_coordinates(coords_fjord, origin, -theta)
 
 # Define final model grid (in rotated coordinates)
-# X from -1000 to +1000 with fine zone from -200 to +200
+# X from -1000 to +1000 with fine zone from -150 to +150
 x_hr = build_variable_resolution(
-    center_start=-200, center_end=200,
+    center_start=-150, center_end=150,
     full_start=-1000, full_end=1000,
     d_fine=0.5, d_max=2.0
 )
-# Y from -300 to 1900 with fine zone from 0 to +400
+# Y from -300 to 1900 with fine zone from 0 to +300
 y_hr = build_variable_resolution(
-    center_start=0, center_end=400,
+    center_start=0, center_end=300,
     full_start=-300, full_end=1900,
     d_fine=0.5, d_max=2.0
 )
@@ -271,8 +271,14 @@ plt.ylabel('y (m)')
 plt.axis('equal')
 plt.tight_layout()
 
+### Compute grid spacing from x- and y-axes
+dx_1d = np.diff(x_hr)
+dx_1d = np.append(dx_1d, dx_1d[-1])  # Repeat last value to match full length
+dy_1d = np.diff(y_hr)
+dy_1d = np.append(dy_1d, dy_1d[-1])
+
 ### save variable into binary filename
 rw.write_to_binary(z_combined, rdir + 'bin_files/bathy.bin', precision='double')
-rw.write_to_binary(np.diff(x_hr), rdir + 'bin_files/dx.bin', precision='double')
-rw.write_to_binary(np.diff(y_hr), rdir + 'bin_files/dy.bin', precision='double')
+rw.write_to_binary(dx_1d, rdir + 'bin_files/dx.bin', precision='double')
+rw.write_to_binary(dy_1d, rdir + 'bin_files/dy.bin', precision='double')
 
