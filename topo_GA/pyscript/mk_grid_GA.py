@@ -67,12 +67,12 @@ from bathy_tools              import (
 )
 
 ### === Define file paths === ###
-rdir     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/'
-HR_grid  = rdir + 'CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_CUBE_0.3m.xyz'
+rdir     = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/Data/'
+HR_grid  = rdir + 'Bathymetry_GA/CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_CUBE_0.3m.xyz'
 # The HR (5 m) bathymetry shows inconsistencies near the northwest boundary. 
-#HR_grid  = rdir + 'CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_MINIMUM_5m.xyz'
-LR_grid1 = rdir + 'NONNA10_4840N07090W.txt'
-LR_grid2 = rdir + 'NONNA10_4830N07090W.txt'
+#HR_grid  = rdir + 'Bathymetry_GA/CA0011760.8527_BATHY_GRANDEANSE_2023-09-27_MINIMUM_5m.xyz'
+LR_grid1 = rdir + 'Bathymetry_Fjord/NONNA10_4840N07090W.txt'
+LR_grid2 = rdir + 'Bathymetry_Fjord/NONNA10_4830N07090W.txt'
 wharf    = rdir + 'Wharf_Grande-Anse.dat'
 fmask    = rdir + 'Grande-Anse_mask.dat'
 fcoast   = rdir + 'Saguenay_coastline.mat'
@@ -271,4 +271,8 @@ plt.ylabel('y (m)')
 plt.axis('equal')
 plt.tight_layout()
 
+### save variable into binary filename
+rw.write_to_binary(z_combined, rdir + 'bin_files/bathy.bin', precision='double')
+rw.write_to_binary(np.diff(x_hr), rdir + 'bin_files/dx.bin', precision='double')
+rw.write_to_binary(np.diff(y_hr), rdir + 'bin_files/dy.bin', precision='double')
 
