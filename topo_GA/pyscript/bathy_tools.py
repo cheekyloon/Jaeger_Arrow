@@ -1,7 +1,8 @@
-import numpy             as np
 import re
+import numpy             as np
 import pandas            as pd
 import matplotlib.pyplot as plt
+from scipy.ndimage       import distance_transform_edt
 from scipy.spatial       import cKDTree
 from matplotlib.path     import Path
 from pyproj              import Transformer
@@ -231,6 +232,12 @@ def rotate_topography(df_xyz, x1, y1, x2, y2, reso=1.0, method='linear', fill_va
     )
 
     return grid_x_rot, grid_y_rot, depth_rot, -theta_rad
+
+def fill_holes_nearest(data, invalid=None):
+    if invalid is None:
+        invalid = np.isnan(data)
+    ind = distance_transform_edt(invalid, return_distances=False, return_indices=True)
+    return data[tuple(ind)]
 
 def plot_bathy_difference(grid_x, grid_y, z_hr_ga, z_hr_fjord, show_figure=False):
     """
