@@ -85,55 +85,56 @@ def trim_grid_to_fit_mpi(dx, dy, Snx=6, Sny=8):
 
     return dx_new, dy_new, nxW, nxE, diff_ny
 
-def generate_vertical_grid(dz0=0.5, max_dz=2.0, growth=1.10, z0=20.0, max_z=100.0, verbose=True):
+def generate_vertical_grid(dz0=0.5, max_dz=2.0, growth=1.10, z0=20.0, target_depth=100.0, verbose=True):
     """
-    Generate a 1D vertical grid spacing (delZ) with:
-    - constant fine resolution near the surface,
-    - gradual increase in layer thickness (geometric),
-    - capped by a maximum layer size,
-    - total depth reaching approximately max_z.
+    Generate a 1D vertical grid spacing (layer thicknesses) from surface to bottom with:
+    - A uniform fine resolution near the surface (up to depth z0),
+    - Followed by a gradual geometric increase in layer thickness,
+    - Capped at a maximum layer thickness max_dz,
+    - Extended with constant max_dz layers until the total depth reaches or exceeds target_depth.
 
     Parameters
     ----------
     dz0 : float
-        Initial layer thickness (m).
+        Initial layer thickness in meters (fine resolution step near surface).
     max_dz : float
-        Maximum allowed layer thickness (m).
+        Maximum allowed thickness of any vertical layer in meters.
     growth : float
-        Multiplicative growth factor for increasing dz.
+        Multiplicative growth factor controlling how quickly layer thickness grows.
     z0 : float
-        Depth over which dz = dz0 (fine resolution zone).
-    max_z : float
-        Target total vertical extent (m).
+        Depth (in meters) over which layers have uniform thickness dz0.
+    target_depth : float
+        Minimum total depth (sum of all layer thicknesses) to reach or exceed.
     verbose : bool
-        If True, print summary info.
+        If True, print summary information about generated vertical grid.
 
     Returns
     -------
     dz : list of float
-        Vertical grid spacing values (from surface to bottom).
+        List of vertical layer thicknesses (meters) from surface downward.
     """
 
-    # Step 1: Uniform fine resolution to depth z0
+    # Step 1: Create uniform fine resolution layers of thickness dz0 down to depth z0
     dz = [dz0] * int(z0 / dz0)
 
-    # Step 2: Geometric growth until reaching max_dz
-    dz_last = dz[-1]
+    # Step 2: Gradually increase layer thickness geometrically, capped by max_dz
+    dz_last = dz[-1]  # start growth from last fine resolution layer thickness
     while True:
-        dz_next = min(dz_last * growth, max_dz)
-        dz.append(dz_next)
+        dz_next = min(dz_last * growth, max_dz)  # grow layer thickness, capped at max_dz
+        dz.append(dz_next)  # add new layer thickness
         if dz_next >= max_dz:
-            break
-        dz_last = dz_next
+            break  # stop increasing once maximum thickness is reached
+        dz_last = dz_next  # update for next iteration
 
-    # Step 3: Fill with max_dz up to total depth
-    while sum(dz) + max_dz <= max_z:
+    # Step 3: Add layers of constant max_dz thickness until total depth reaches target_depth
+    while sum(dz) < target_depth:
         dz.append(max_dz)
 
-    # Step 4: Optional adjustment to end cleanly at max_dz
+    # Step 4: Ensure last layer thickness is exactly max_dz (adjust if needed)
     if dz[-1] != max_dz:
         dz[-1] = max_dz
 
+    # Optional verbose output of grid characteristics
     if verbose:
         print(f"Vertical grid generated:")
         print(f" - Total depth: {sum(dz):.2f} m")
