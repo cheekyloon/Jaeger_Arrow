@@ -2,11 +2,31 @@
 
 #import modules
 import time
+import sys
 import scipy.io
 import numpy             as np
 import matplotlib.pyplot as plt
 from scipy               import interpolate
 from PyDJL               import DJL, Diagnostic
+
+def write_to_binary(data, fileout, precision='double'):
+    ''' write variable from np.array to fileout with precision '''
+    # write data to binary files
+    fid   = open(fileout, "wb")
+    flatdata = data.flatten()
+    if precision == 'single':
+        if sys.byteorder == 'little':
+            tmp = flatdata.astype(np.dtype('f')).byteswap(True).tobytes()
+        else:
+            tmp = flatdata.astype(np.dtype('f')).tobytes()
+    elif precision == 'double':
+        if sys.byteorder == 'little':
+            tmp = flatdata.astype(np.dtype('d')).byteswap(True).tobytes()
+        else:
+            tmp = flatdata.astype(np.dtype('d')).tobytes()
+    fid.write(tmp)
+    fid.close()
+    return None
 
 def write_mitgcm_binary(data, fileout, precision='double'):
     """
