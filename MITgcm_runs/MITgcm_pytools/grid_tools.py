@@ -15,7 +15,7 @@ def write_mitgcm_binary(data, fileout, precision='double'):
     Parameters
     ----------
     data : np.ndarray
-        The array to write.
+        The array to write. Must be ordered as (Nz, Ny, Nx) for 3D data.
     fileout : str
         Output file path.
     precision : str, optional
@@ -24,16 +24,16 @@ def write_mitgcm_binary(data, fileout, precision='double'):
 
     Notes
     -----
-    MITgcm requires big-endian binary files.
+    MITgcm requires big-endian binary files, and data should be stored in Fortran order.
     """
-    flatdata = data.flatten()
+    flatdata = data.flatten(order='F')  # Fortran-order flattening
     if precision == 'single':
         dtype = np.dtype('>f4')  # big-endian float32
     elif precision == 'double':
         dtype = np.dtype('>f8')  # big-endian float64
     else:
         raise ValueError("Precision must be 'single' or 'double'")
-    
+
     flatdata.astype(dtype).tofile(fileout)
 
 def trim_grid_to_fit_mpi(dx, dy, Snx=6, Sny=8):
