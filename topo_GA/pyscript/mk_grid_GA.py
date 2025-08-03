@@ -159,10 +159,10 @@ x_hr = build_variable_resolution(
     full_start=-1000, full_end=1000,
     d_fine=0.5, d_max=2.0
 )
-# Y from -300 to 1900 with fine zone from 0 to +300
+# Y from -200 to 1900 with fine zone from 0 to +300
 y_hr = build_variable_resolution(
     center_start=0, center_end=300,
-    full_start=-300, full_end=1900,
+    full_start=-220, full_end=1900,
     d_fine=0.5, d_max=2.0
 )
 
