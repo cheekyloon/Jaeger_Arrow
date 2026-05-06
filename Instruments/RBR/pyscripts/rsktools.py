@@ -8,9 +8,10 @@ import pandas            as pd
 import numpy             as np
 import rsktools          as rsk
 import matplotlib.pyplot as plt
-from scipy             import signal
-from pyrsktools        import RSK
-from sklearn.neighbors import NearestNeighbors
+from scipy               import signal
+from scipy.interpolate   import interp1d
+from pyrsktools          import RSK
+from sklearn.neighbors   import NearestNeighbors
 
 def winmean_rsk_data(dirRSK, file, variable, window_size=5, threshold=0):
     """
@@ -74,7 +75,7 @@ def winmean_rsk_data(dirRSK, file, variable, window_size=5, threshold=0):
     
     return dfm
 
-def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0,
+def load_rsk_data(dirRSK, file, variable, t0, tend,
                   apply_rolling=False, window_size=900):
     """
     Load and filter RSK data for a given variable (e.g., pressure or temperature).
@@ -91,8 +92,6 @@ def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0,
         The start time for filtering the data.
     tend          : pd.Timestamp
         The end time for filtering the data.
-    threshold     : float, optional (default=0)
-        A value to be added to the extracted data (useful for pressure correction).
     apply_rolling : bool, optional (default=False)
         Whether to apply a rolling mean to the data.
     window_size   : int, optional (default=900)
@@ -108,10 +107,15 @@ def load_rsk_data(dirRSK, file, variable, t0, tend, threshold=0,
     rsk.open()
     rsk.readdata()
 
+    # Compute the depth from the pressure
+    if variable.lower() == 'depth':
+       rsk.deriveseapressure()
+       rsk.derivedepth()
+ 
     # Create DataFrame with timestamp as index
     df = pd.DataFrame({
         'timestamp': pd.to_datetime(rsk.data['timestamp']),
-        variable: rsk.data[variable] + threshold
+        variable: rsk.data[variable]
     }).set_index('timestamp')
 
     # Apply rolling mean if requested
@@ -204,7 +208,7 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, depth=10):
     # number of time steps
     nt = all_var.shape[1] 
     # number of vertical levels
-    nz = int(np.ceil(depth / dz)) + 1
+    nz = int(depth / dz) + 1
 
     # Initialize output arrays
     interp_var = np.full((nz, nt), np.nan)
@@ -220,8 +224,8 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, depth=10):
 
         # Replace the first valid z value with the surface value (pressure_data)
         valid = np.where(~np.isnan(z_col))[0]
-        if len(valid) > 0:
-            z_col[valid[0]] = z_surf 
+        #if len(valid) > 0:
+        #    z_col[valid[0]] = z_surf 
 
         # create a mask to remove NaNs
         mask = ~np.isnan(var_col) & ~np.isnan(z_col)
@@ -243,7 +247,10 @@ def interp_avg_top(all_var, all_z, pressure_data, dz=0.5, depth=10):
 
         # Interpolate onto increasing z_grid (bottom to surface),
         # then reverse to get back to surface-to-bottom orientation
-        interp_col = np.interp(np.sort(z_grid_z), z_sorted, var_sorted, left=np.nan, right=np.nan)
+        f_interp   = interp1d(z_sorted, var_sorted, bounds_error=False, fill_value="extrapolate")
+        interp_col = f_interp(np.sort(z_grid_z))
+        # Apply zero-gradient condition at the surface
+        interp_col[np.sort(z_grid_z) > z_sorted[-1]] = var_sorted[-1]
         # flip back to surface-to-bottom
         interp_var[:, t] = interp_col[::-1]  
 
