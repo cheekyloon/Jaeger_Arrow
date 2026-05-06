@@ -1,7 +1,7 @@
 #!/Users/sandy/miniconda3/bin/python
 
 # This script load temperature field from rsk thermometers
-# Temperatures are masked above sea level using pressure data
+# Temperatures are masked above sea level using depth data
 # The depth-weighted temperature is computed and filtered (Method 1)
 # The temperature is filtered and depth-averaged (Method 2) 
 # The phase-averaged sea level and filtered depth-weighted temperature 
@@ -16,10 +16,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates  as md
 from scipy               import signal
 from matplotlib.ticker   import LogLocator
-
+from scipy.signal        import hilbert
 ###################################
 # Period of measurements
-year   = '2024'
+year   = '2023'
 # define directory to save figure
 figdir = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/'
 # define RSK directory 
@@ -39,6 +39,8 @@ if year == '2023':
     # beginning and end time of event
     t0      = pd.to_datetime('2023-09-15 15:30:00')
     tend    = pd.to_datetime('2023-11-01 16:30:00')
+    t0      = pd.to_datetime('2023-09-15 15:14:49')
+    tend    = pd.to_datetime('2023-11-01 15:30:33')
 else:
     fileRSK = [
         '230463_20240911_1135.rsk', '230462_20240911_1114.rsk',
@@ -52,6 +54,8 @@ else:
     ]
     t0      = pd.to_datetime('2024-07-24 00:00:00')
     tend    = pd.to_datetime('2024-09-11 12:00:00')
+    t0      = pd.to_datetime('2024-07-23 14:40:00')
+    tend    = pd.to_datetime('2024-09-11 11:10:42')
 
 # Define RSK z-axis
 zSolo       = np.array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 7, 5, 3, 1])
@@ -61,12 +65,12 @@ depth = 13
 # order of filter 
 N_but = 4
 
-# Step 1: Load pressure data from the last RSK file '230890_20231101_1849.rsk'
-df_pressure = rsk.load_rsk_data(dirRSK, fileRSK[-1], 'pressure', t0, tend, -9.13)
+# Step 1: Load depth data from the last RSK file '230890_20231101_1849.rsk'
+df_h = rsk.load_rsk_data(dirRSK, fileRSK[-1], 'depth', t0, tend) + 1
 # apply a lowpass filter on water level
-df_pressure['h'] = rsk.lp_filter(df_pressure['pressure'], df_pressure.index, 1/1800, N_but)
+df_h['h'] = rsk.lp_filter(df_h['depth'], df_h.index, 1/1800, N_but)
 # extract h
-h = df_pressure['h']
+h = df_h['h']
 # computer eta
 eta   = h.values - h.mean()
 
@@ -82,43 +86,37 @@ T_mean, T_i, z_grid = rsk.interp_avg_top(all_T, all_z, h, depth=depth)
 T_low   = 360
 T_high  = 30
 # apply filter
-T_mean_but = rsk.bp_filter(T_mean, df_pressure.index, 1/T_low, 1/T_high, N_but)
-T_i_but    = rsk.bp_filter(T_i, df_pressure.index, 1/T_low, 1/T_high, N_but)
+T_mean_but = rsk.bp_filter(T_mean, df_h.index, 1/T_low, 1/T_high, N_but)
+T_i_but    = rsk.bp_filter(T_i, df_h.index, 1/T_low, 1/T_high, N_but)
 
 # Step 6: Compute the average of the filtered temperature over 13 m 
 T_i_but_mean = np.nanmean(T_i_but**2, axis=0)
 
-# save data into .mat
-from scipy.io    import savemat
-# Convert pandas index to list of Python datetimes
-time_python = df_pressure.index.to_pydatetime()
-# Convert to MATLAB datenum
-time_matlab = np.array([
-    dt.toordinal() + 366 + (dt.hour*3600 + dt.minute*60 + dt.second + dt.microsecond/1e6) / 86400
-    for dt in time_python
-])
+# save data 
 # Prepare the data to save
-data_to_save = {
-  'Tprime': T_i_but_mean,
-  'time'  : time_matlab,    
-}
-# Save in a .mat file
+df = pd.DataFrame({
+    'time'  : df_h.index,
+    'P'     : h,
+    'Tprime': T_i_but_mean
+})
+
+# Save in a .dat file
 dir_mat = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/mat/'
-savemat(dir_mat + 'Tprime_mean_2024.mat', data_to_save)
+df.to_csv(dir_mat + 'Tprime_mean_2024.dat', sep='\t', index=False)
 
 # Step 7: Compute phase averages 
 # number of bins
 N_bin = 50
 # water level
-phase_bin, h_bin     = rsk.M2_phase_avg(h, df_pressure.index, eta, N_bin)
+phase_bin, h_bin     = rsk.M2_phase_avg(h, df_h.index, eta, N_bin)
 # weighted-averaged temperature
-phase_bin, T_bin_1   = rsk.M2_phase_avg(h, df_pressure.index, T_mean_but**2, N_bin)
-phase_bin, T_bin_2   = rsk.M2_phase_avg(h, df_pressure.index, T_i_but_mean, N_bin)
-phase_bin, all_T_bin = rsk.M2_phase_avg(h, df_pressure.index, T_i_but**2, N_bin)
+phase_bin, T_bin_1   = rsk.M2_phase_avg(h, df_h.index, T_mean_but**2, N_bin)
+phase_bin, T_bin_2   = rsk.M2_phase_avg(h, df_h.index, T_i_but_mean, N_bin)
+phase_bin, all_T_bin = rsk.M2_phase_avg(h, df_h.index, T_i_but**2, N_bin)
 
 # Step 8: Spectral analysis
 # Calculate sampling interval and frequency
-dt = (df_pressure.index[1] - df_pressure.index[0]).total_seconds()
+dt = (df_h.index[1] - df_h.index[0]).total_seconds()
 Fs = 1 / dt
 # === Mimic MATLAB default ===
 # segment length
@@ -134,6 +132,65 @@ F_T, P_T   = signal.welch(T_mean, Fs, nperseg = perseg, noverlap=overlap, nfft=n
 F_T, P_Tf1 = signal.welch(T_mean_but, Fs, nperseg = perseg, noverlap=overlap, nfft=nfft, window = "hamming", detrend = False)
 # depth-averaged of filtered temperature (Method 2) 
 F_T, P_Tf2 = signal.welch(T_i_but_mean, Fs, nperseg = perseg, noverlap=overlap, nfft=nfft, window = "hamming", detrend = False)
+
+# Compute the local tidal amplitude using the Hilbert transform
+# The mean water level is removed before calculating the analytic signal
+amp = np.abs(hilbert(h.values - np.nanmean(h.values)))
+
+# Split the time series into two equal groups based on tidal amplitude
+# Low-amplitude periods correspond to neap tides
+# High-amplitude periods correspond to spring tides
+amp_med = np.nanmedian(amp)
+
+# Create masks separating low- and high-amplitude tidal periods
+# Low tidal amplitudes correspond to neap tides
+# High tidal amplitudes correspond to spring tides
+mask_neap   = amp <= amp_med
+mask_spring = amp >  amp_med
+
+# Extract water level time series for neap and spring tides
+h_neap = h[mask_neap]
+h_spring = h[mask_spring]
+
+# Extract corresponding timestamps
+time_neap = df_h.index[mask_neap]
+time_spring = df_h.index[mask_spring]
+
+# Extract temperature variance proxy during neap and spring tides
+Tprime_neap = T_i_but_mean[mask_neap]
+Tprime_spring = T_i_but_mean[mask_spring]
+
+# Compute phase-averaged sea surface elevation during neap tides
+phase_bin, h_bin_neap = rsk.M2_phase_avg(
+    h_neap,
+    time_neap,
+    eta[mask_neap],
+    N_bin
+)
+
+# Compute phase-averaged sea surface elevation during spring tides
+phase_bin, h_bin_spring = rsk.M2_phase_avg(
+    h_spring,
+    time_spring,
+    eta[mask_spring],
+    N_bin
+)
+
+# Compute phase-averaged temperature variance proxy during neap tides
+phase_bin, T_bin_neap = rsk.M2_phase_avg(
+    h_neap,
+    time_neap,
+    Tprime_neap,
+    N_bin
+)
+
+# Compute phase-averaged temperature variance proxy during spring tides
+phase_bin, T_bin_spring = rsk.M2_phase_avg(
+    h_spring,
+    time_spring,
+    Tprime_spring,
+    N_bin
+)
 
 #### Make the figure ####
 
@@ -211,11 +268,11 @@ f2.savefig(figname2,dpi=500,bbox_inches='tight')
 # Timeseries
 f3, ax3 = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
 # First subplot: water level 
-ax3[0].plot(df_pressure.index, h, linestyle='-', color='b')
+ax3[0].plot(df_h.index, h, linestyle='-', color='b')
 ax3[0].set_yticks(np.arange(14,21,1))
 # Second subplot: weighted-averaged temperature 
-ax3[1].plot(df_pressure.index, T_mean - np.nanmean(T_mean), linestyle='-', color='k', label=r"$\overline{T} - mean(\overline{T})$")
-ax3[1].plot(df_pressure.index, T_mean_but, linestyle='-', color='b', label=r"$\overline{T}'$")
+ax3[1].plot(df_h.index, T_mean - np.nanmean(T_mean), linestyle='-', color='k', label=r"$\overline{T} - mean(\overline{T})$")
+ax3[1].plot(df_h.index, T_mean_but, linestyle='-', color='b', label=r"$\overline{T}'$")
 ax3[1].legend(loc="lower right", fontsize=10)
 ax3[1].set_yticks(np.arange(-8,9,2))
 # Date formatting on the x-axis of the second subplot
@@ -273,3 +330,72 @@ figname5 =f"{figdir}PSD-BP{T_low}–{T_high}-y{int(year)}-{depth}m.png"
 f5.savefig(figname5,dpi=500,bbox_inches='tight')
 
 
+# Phase average: neap vs spring
+f6, ax6 = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+# ===== Water level =====
+ax6[0].plot(
+    time_bin,
+    h_bin_neap,
+    linestyle='-',
+    linewidth=1.5,
+    color='b',
+    label='Neap tides'
+)
+
+ax6[0].plot(
+    time_bin,
+    h_bin_spring,
+    linestyle='-',
+    linewidth=1.5,
+    color='r',
+    label='Spring tides'
+)
+
+ax6[0].set_yticks(np.arange(-2.5, 3.0, 0.5))
+ax6[0].set_ylim(-2.5, 2.5)
+ax6[0].set_ylabel(r"$\eta$ (m)")
+
+ax6[0].set_title(
+    rf"Year {int(year)}: $f_c = [1/{T_low}\,\mathrm{{s}},\,1/{T_high}\,\mathrm{{s}}]$"
+)
+
+ax6[0].legend()
+
+# ===== Temperature =====
+ax6[1].plot(
+    time_bin,
+    np.sqrt(T_bin_neap),
+    linestyle='-',
+    linewidth=1.5,
+    color='b',
+    label='Neap tides'
+)
+
+ax6[1].plot(
+    time_bin,
+    np.sqrt(T_bin_spring),
+    linestyle='-',
+    linewidth=1.5,
+    color='r',
+    label='Spring tides'
+)
+
+ax6[1].set_xticks(np.arange(-3, 9.5, 1))
+ax6[1].set_yticks(np.arange(0., 0.95, 0.1))
+
+ax6[1].set_ylabel(
+    r"$\sigma \left(\overline{T'}\right)\ [^\circ\mathrm{C}]$"
+)
+
+ax6[1].set_xlabel('Time relative to high water [h]')
+
+ax6[1].legend()
+
+# Save figure
+figname6 = (
+    f"{figdir}neap-spring-phase-avg-BP{T_low}-{T_high}-"
+    f"y{year}-{depth}m.png"
+)
+
+f6.savefig(figname6, dpi=500, bbox_inches='tight')
