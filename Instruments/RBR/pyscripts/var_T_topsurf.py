@@ -19,7 +19,7 @@ from matplotlib.ticker   import LogLocator
 from scipy.signal        import hilbert
 ###################################
 # Period of measurements
-year   = '2023'
+year   = '2024'
 # define directory to save figure
 figdir = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/Instruments/RBR/Figs/'
 # define RSK directory 
@@ -137,16 +137,27 @@ F_T, P_Tf2 = signal.welch(T_i_but_mean, Fs, nperseg = perseg, noverlap=overlap, 
 # The mean water level is removed before calculating the analytic signal
 amp = np.abs(hilbert(h.values - np.nanmean(h.values)))
 
+# Smooth the amplitude over ~1 day
+dt = (df_h.index[1] - df_h.index[0]).total_seconds()
+win = int((24 * 3600) / dt)
+
+amp_smooth = (
+    pd.Series(amp, index=df_h.index)
+    .rolling(win, center=True, min_periods=1)
+    .mean()
+    .values
+)
+
 # Split the time series into two equal groups based on tidal amplitude
 # Low-amplitude periods correspond to neap tides
 # High-amplitude periods correspond to spring tides
-amp_med = np.nanmedian(amp)
+amp_med = np.nanmedian(amp_smooth)
 
 # Create masks separating low- and high-amplitude tidal periods
 # Low tidal amplitudes correspond to neap tides
 # High tidal amplitudes correspond to spring tides
-mask_neap   = amp <= amp_med
-mask_spring = amp >  amp_med
+mask_neap   = amp_smooth <= amp_med
+mask_spring = amp_smooth >  amp_med
 
 # Extract water level time series for neap and spring tides
 h_neap = h[mask_neap]
