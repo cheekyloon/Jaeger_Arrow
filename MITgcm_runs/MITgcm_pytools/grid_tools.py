@@ -56,10 +56,10 @@ def write_mitgcm_binary(data, fileout, precision='double'):
 
     flatdata.astype(dtype).tofile(fileout)
 
-def trim_grid_to_fit_mpi(dx, dy, Snx=6, Sny=8):
+def trim_grid_to_fit_mpi(dx, dy, nPx=6, nPy=8):
     """
     Trim the horizontal grid (dx, dy) so that its dimensions are multiples
-    of the MPI tile sizes (Snx, Sny). The trimming is:
+    of the MPI decomposition (nPx, nPy). The trimming is:
       - symmetrical in x (split west/east)
       - from the south in y
 
@@ -69,21 +69,25 @@ def trim_grid_to_fit_mpi(dx, dy, Snx=6, Sny=8):
         1D array of x-direction grid spacing.
     dy : ndarray
         1D array of y-direction grid spacing.
-    Snx : int
-        Number of grid points per tile in x-direction.
-    Sny : int
-        Number of grid points per tile in y-direction.
+    nPx : int
+        Number of MPI processes/tiles in x-direction.
+    nPy : int
+        Number of MPI processes/tiles in y-direction.
 
     Returns
     -------
     dx_new : ndarray
-        Trimmed x-direction spacing (length divisible by Snx).
+        Trimmed x-direction spacing (length divisible by nPx).
+
     dy_new : ndarray
-        Trimmed y-direction spacing (length divisible by Sny).
+        Trimmed y-direction spacing (length divisible by nPy).
+
     nxW : int
         Number of points trimmed from the west.
+
     nxE : int
         Number of points trimmed from the east.
+
     diff_ny : int
         Number of points trimmed from the south.
     """
@@ -92,8 +96,8 @@ def trim_grid_to_fit_mpi(dx, dy, Snx=6, Sny=8):
     ny = len(dy)
 
     # How many points to remove to make divisible
-    diff_nx = nx % Snx
-    diff_ny = ny % Sny
+    diff_nx = nx % nPx
+    diff_ny = ny % nPy
 
     # Split trimming in x-direction: west/east
     nxW = diff_nx // 2
