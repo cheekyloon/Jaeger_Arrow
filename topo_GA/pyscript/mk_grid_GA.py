@@ -117,7 +117,8 @@ theta = compute_rotation_angle(x1, y1, x2, y2)
 origin = np.array([(x1 + x2) / 2, (y1 + y2) / 2])
 
 # Define bounding box around model domain in original coordinates
-x_min, x_max = origin[0] - 1100, origin[0] + 1100
+#x_min, x_max = origin[0] - 1100, origin[0] + 1100
+x_min, x_max = origin[0] - 1100, origin[0] + 1500
 y_min, y_max = origin[1] - 500, origin[1] + 2200
 
 # Filter fjord bathymetry to local domain
@@ -156,13 +157,14 @@ coords_fjord_rot = rotate_coordinates(coords_fjord, origin, -theta)
 # X from -1000 to +1000 with fine zone from -150 to +150
 x_hr = build_variable_resolution(
     center_start=-150, center_end=150,
-    full_start=-1000, full_end=1000,
+    #full_start=-1000, full_end=1000,
+    full_start=-1000, full_end=1400,
     d_fine=0.5, d_max=2.0
 )
 # Y from -200 to 1900 with fine zone from 0 to +300
 y_hr = build_variable_resolution(
     center_start=0, center_end=300,
-    full_start=-220, full_end=1900,
+    full_start=-250, full_end=1900,
     d_fine=0.5, d_max=2.0
 )
 
@@ -263,8 +265,9 @@ plt.colorbar(c, label='Depth (m)')
 plt.plot(contour_0_rot[:, 0], contour_0_rot[:, 1], 'r-', lw=2, label='Shoreline 0')
 plt.plot(merged_shoreline[:, 0], merged_shoreline[:, 1], 'k-', lw=2, label='Shoreline 1')
 # Axis and labels
-plt.xlim(-1100, 1100)
-plt.ylim(-500, 2200)
+plt.xlim(-1100, 1500)
+#plt.xlim(-1100, 1100)
+#plt.ylim(-500, 2200)
 plt.title('Masked bathymetry (land excluded)')
 plt.xlabel('x (m)')
 plt.ylabel('y (m)')
@@ -278,7 +281,7 @@ dy_1d = np.diff(y_hr)
 dy_1d = np.append(dy_1d, dy_1d[-1])
 
 ### save variable into binary filename
-rw.write_to_binary(z_combined, rdir + 'bin_files/bathy.bin', precision='double')
-rw.write_to_binary(dx_1d, rdir + 'bin_files/dx.bin', precision='double')
-rw.write_to_binary(dy_1d, rdir + 'bin_files/dy.bin', precision='double')
+rw.write_to_binary(z_combined, rdir + 'bin_files/bathy_extent_right.bin', precision='double')
+rw.write_to_binary(dx_1d, rdir + 'bin_files/dx_extent_right.bin', precision='double')
+rw.write_to_binary(dy_1d, rdir + 'bin_files/dy_extent_right.bin', precision='double')
 
