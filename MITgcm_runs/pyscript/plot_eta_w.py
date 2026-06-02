@@ -42,18 +42,18 @@ import pandas            as pd
 import xarray            as xr
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from matplotlib.colors import LinearSegmentedColormap
-from scipy.io import loadmat
-from pyproj   import Transformer
+from matplotlib.colors   import LinearSegmentedColormap
+from scipy.io            import loadmat
+from pyproj              import Transformer
 #=========================================
-exp_name  = '45Deg_4ISW'
+exp_name  = '45Deg_4ISW_sponge_extent_right'
 dirF      = '/Volumes/LaCie/JaegerArrow/MITgcm_runs/'
 GA_dir   = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/topo_GA/Data/'
 
 
 
 gfile     = os.path.join(dirF, exp_name, 'mnc_glob/grid.glob.nc')
-surf_file = os.path.join(dirF, exp_name, 'mnc_glob/SurfDiag.glob.nc')
+surf_file = os.path.join(dirF, exp_name, 'mnc_glob/SurfDiag.0000000000.glob.nc')
 dyn_file  = os.path.join(dirF, exp_name, 'mnc_glob/dynDiag.glob.nc')
 
 fgname_eta = '/Users/sandy/Documents/ISW_projects/Jaeger_Arrow/pictures/eta_' + exp_name + '.png'
@@ -171,7 +171,7 @@ eta = xr.open_dataset(surf_file).ETAN.isel(Zd000001=0)
 xx, yy = np.meshgrid(grid.X.values, grid.Y.values)
 
 # Times to plot
-itimes = [1, 120, 240, 350]
+itimes = [1, 120, 240, 326]
 
 # If T is in seconds in your file:
 times_sec = eta.coords['T'].isel(T=itimes).values 
@@ -216,17 +216,20 @@ def plot_4panels(var, fgname, cbar_label, cmap='bone', land_color='#ffeabc'):
     vmin = -vmax
     levels = np.linspace(vmin, vmax, 31)
     norm = colors.TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
+
     #bg_color = cmap(norm(0.0))
     #bg = np.array(cmap(norm(0.0))[:3])
     #bg_dark = tuple(0.85 * bg)
     #bg_light = tuple(0.75 * bg + 0.25 * np.ones(3))
     #bg_color = "#262626"
+
+    # Extract a small portion of the image to use as a background texture 
     texture = img[900:1100, 200:400].copy()
-    # Convertir en gris
+    # Convert RGB image to grayscale
     texture_gray = texture.mean(axis=2)
-    # Assombrir
-    texture_gray = texture_gray * 0.25
-    # Ajouter du bruit
+    # Reduce brightness to obtain a subtle background texture
+    texture_gray *= 0.25
+    # Add Gaussian noise to mimic paper grain
     noise = 0.10 * np.random.randn(*texture_gray.shape)
     texture_gray = np.clip(texture_gray + noise, 0, 1)
 
